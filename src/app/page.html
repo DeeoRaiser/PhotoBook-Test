@@ -1,0 +1,1048 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>PhotoBook — Plataforma para fotógrafos profesionales</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    :root {
+      --ink: #0d0d0d;
+      --ivory: #f7f4ef;
+      --gold: #c9a96e;
+      --gold-light: #e8d5b0;
+      --muted: #7a7268;
+      --border: rgba(201,169,110,0.2);
+      --card-bg: #faf8f5;
+      --white: #ffffff;
+    }
+
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--ivory);
+      color: var(--ink);
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='1'/%3E%3C/svg%3E");
+      opacity: 0.025;
+      pointer-events: none;
+      z-index: 9999;
+    }
+
+    h1, h2, h3 { font-family: 'Cormorant Garamond', serif; font-weight: 300; letter-spacing: -0.02em; }
+
+    /* ── HEADER ── */
+    .header {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 100;
+      padding: 1.4rem 3rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      transition: all 0.5s ease;
+    }
+
+    .header.scrolled {
+      background: rgba(247,244,239,0.94);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+      padding: 1rem 3rem;
+    }
+
+    .logo {
+      font-family: 'Cormorant Garamond', serif;
+      font-weight: 400;
+      font-size: 1.5rem;
+      letter-spacing: 0.1em;
+      color: var(--ink);
+      text-transform: uppercase;
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+    }
+
+    .logo-dot { width: 6px; height: 6px; background: var(--gold); border-radius: 50%; }
+
+    .nav-links { display: flex; gap: 2.5rem; list-style: none; align-items: center; }
+
+    .nav-links a {
+      text-decoration: none;
+      color: var(--muted);
+      font-size: 0.82rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      font-weight: 400;
+      transition: color 0.3s;
+    }
+
+    .nav-links a:hover { color: var(--ink); }
+
+    .nav-cta {
+      background: var(--ink) !important;
+      color: var(--ivory) !important;
+      padding: 0.55rem 1.5rem !important;
+      font-size: 0.78rem !important;
+      letter-spacing: 0.1em !important;
+      transition: all 0.3s ease !important;
+    }
+
+    .nav-cta:hover { background: var(--gold) !important; color: var(--ink) !important; }
+
+    /* ── HERO ── */
+    .hero {
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      overflow: hidden;
+    }
+
+    .hero-left {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 8rem 4rem 6rem 5rem;
+      position: relative;
+      z-index: 2;
+    }
+
+    .hero-eyebrow {
+      font-size: 0.72rem;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      color: var(--gold);
+      margin-bottom: 1.8rem;
+      display: flex;
+      align-items: center;
+      gap: 0.8rem;
+      opacity: 0;
+      animation: fadeUp 1s 0.2s forwards;
+    }
+
+    .hero-eyebrow::before { content: ''; display: block; width: 30px; height: 1px; background: var(--gold); }
+
+    .hero-title {
+      font-size: clamp(3.5rem, 5.5vw, 6rem);
+      line-height: 1.0;
+      font-weight: 300;
+      margin-bottom: 2rem;
+      opacity: 0;
+      animation: fadeUp 1s 0.4s forwards;
+    }
+
+    .hero-title em { font-style: italic; color: var(--gold); }
+
+    .hero-subtitle {
+      font-size: 1rem;
+      color: var(--muted);
+      line-height: 1.7;
+      max-width: 420px;
+      margin-bottom: 3rem;
+      font-weight: 300;
+      opacity: 0;
+      animation: fadeUp 1s 0.6s forwards;
+    }
+
+    .hero-actions {
+      display: flex;
+      gap: 1.2rem;
+      align-items: center;
+      opacity: 0;
+      animation: fadeUp 1s 0.8s forwards;
+    }
+
+    .btn-gold {
+      background: var(--gold);
+      color: var(--ink);
+      padding: 0.9rem 2.2rem;
+      font-size: 0.8rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      font-weight: 500;
+      border: none;
+      cursor: pointer;
+      transition: all 0.35s ease;
+      font-family: 'DM Sans', sans-serif;
+    }
+
+    .btn-gold:hover {
+      background: var(--ink);
+      color: var(--ivory);
+      transform: translateY(-2px);
+      box-shadow: 0 12px 30px rgba(13,13,13,0.15);
+    }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--muted);
+      padding: 0.9rem 1.5rem;
+      font-size: 0.8rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      font-weight: 400;
+      border: 1px solid var(--border);
+      cursor: pointer;
+      transition: all 0.3s ease;
+      font-family: 'DM Sans', sans-serif;
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+    }
+
+    .btn-ghost:hover { border-color: var(--gold); color: var(--gold); }
+
+    .hero-right { position: relative; overflow: hidden; }
+
+    .hero-img-main {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: top center;
+      display: block;
+      filter: brightness(0.88) contrast(1.05);
+    }
+
+    .hero-img-overlay {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(to right, var(--ivory) 0%, transparent 18%);
+      pointer-events: none;
+    }
+
+    .hero-ui-card {
+      position: absolute;
+      bottom: 2.5rem;
+      left: -60px;
+      background: white;
+      padding: 1rem 1.2rem;
+      box-shadow: 0 30px 60px rgba(0,0,0,0.12);
+      width: 220px;
+      opacity: 0;
+      animation: slideInCard 1s 1.2s forwards;
+      border-left: 3px solid var(--gold);
+    }
+
+    .hero-ui-card-label { font-size: 0.65rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--gold); margin-bottom: 0.4rem; }
+    .hero-ui-card-title { font-family: 'Cormorant Garamond', serif; font-size: 1rem; font-weight: 400; color: var(--ink); margin-bottom: 0.3rem; }
+    .hero-ui-card-meta { font-size: 0.72rem; color: var(--muted); }
+
+    .hero-ui-card-2 {
+      position: absolute;
+      top: 35%;
+      right: 1.5rem;
+      background: rgba(13,13,13,0.82);
+      backdrop-filter: blur(12px);
+      padding: 0.8rem 1rem;
+      width: 160px;
+      opacity: 0;
+      animation: slideInCard2 1s 1.5s forwards;
+    }
+
+    .hero-ui-card-2-label { font-size: 0.6rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--gold); margin-bottom: 0.5rem; }
+
+    .hero-ui-card-2-badge {
+      background: rgba(201,169,110,0.15);
+      color: var(--gold-light);
+      font-size: 0.65rem;
+      padding: 0.25rem 0.6rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      display: inline-block;
+      margin-bottom: 0.4rem;
+    }
+
+    .hero-ui-card-2-text { font-size: 0.7rem; color: rgba(255,255,255,0.6); }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(24px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes slideInCard {
+      from { opacity: 0; transform: translateX(-20px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+
+    @keyframes slideInCard2 {
+      from { opacity: 0; transform: translateX(20px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+
+    /* ── MARQUEE ── */
+    .marquee-section {
+      padding: 1.2rem 0;
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      overflow: hidden;
+      background: var(--ink);
+    }
+
+    .marquee-track {
+      display: flex;
+      gap: 3rem;
+      animation: marquee 25s linear infinite;
+      white-space: nowrap;
+    }
+
+    .marquee-item {
+      font-size: 0.7rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--gold);
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .marquee-item span { color: rgba(201,169,110,0.35); }
+
+    @keyframes marquee {
+      from { transform: translateX(0); }
+      to { transform: translateX(-50%); }
+    }
+
+    /* ── SECTIONS ── */
+    .section-label {
+      font-size: 0.7rem;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      color: var(--gold);
+      margin-bottom: 1.2rem;
+      display: flex;
+      align-items: center;
+      gap: 0.8rem;
+    }
+
+    .section-label::before { content: ''; display: block; width: 24px; height: 1px; background: var(--gold); }
+
+    .section-title {
+      font-size: clamp(2.5rem, 4vw, 4.5rem);
+      font-weight: 300;
+      line-height: 1.05;
+      margin-bottom: 1.5rem;
+    }
+
+    .section-title em { font-style: italic; color: var(--gold); }
+
+    /* ── FEATURES BENTO ── */
+    .features-section { background: var(--ivory); padding: 8rem 5rem; }
+
+    .features-header {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 4rem;
+      align-items: end;
+      margin-bottom: 5rem;
+    }
+
+    .features-desc {
+      color: var(--muted);
+      font-size: 1rem;
+      line-height: 1.8;
+      font-weight: 300;
+      align-self: end;
+    }
+
+    .bento-grid {
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap: 1.5rem;
+    }
+
+    .bento-card {
+      background: var(--white);
+      border: 1px solid rgba(0,0,0,0.06);
+      padding: 2.5rem;
+      position: relative;
+      overflow: hidden;
+      transition: all 0.4s cubic-bezier(0.2,0.8,0.2,1);
+    }
+
+    .bento-card::after {
+      content: '';
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      height: 2px;
+      background: linear-gradient(to right, var(--gold), transparent);
+      transform: scaleX(0);
+      transform-origin: left;
+      transition: transform 0.4s ease;
+    }
+
+    .bento-card:hover { transform: translateY(-4px); box-shadow: 0 20px 50px rgba(0,0,0,0.08); }
+    .bento-card:hover::after { transform: scaleX(1); }
+
+    .bento-1 { grid-column: 1 / 6; }
+    .bento-2 { grid-column: 6 / 9; }
+    .bento-3 { grid-column: 9 / 13; }
+    .bento-4 { grid-column: 1 / 5; }
+    .bento-5 { grid-column: 5 / 13; padding: 0; display: grid; grid-template-columns: 1fr 1fr; }
+
+    .bento-icon {
+      width: 44px; height: 44px;
+      border: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: center;
+      margin-bottom: 1.8rem;
+      color: var(--gold);
+      font-size: 1rem;
+    }
+
+    .bento-card h3 {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1.5rem;
+      font-weight: 400;
+      margin-bottom: 0.8rem;
+    }
+
+    .bento-card p { font-size: 0.9rem; color: var(--muted); line-height: 1.7; font-weight: 300; }
+
+    .bento-tag {
+      display: inline-block;
+      margin-top: 1.2rem;
+      font-size: 0.65rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--gold);
+      border: 1px solid var(--border);
+      padding: 0.3rem 0.8rem;
+    }
+
+    .bento-5-content { padding: 2.5rem; display: flex; flex-direction: column; justify-content: center; }
+    .bento-5-img { overflow: hidden; }
+
+    .bento-5-img img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: top center;
+      display: block;
+      transition: transform 0.6s ease;
+    }
+
+    .bento-5:hover .bento-5-img img { transform: scale(1.03); }
+
+    /* ── GALLERIES ── */
+    .galleries-section { background: var(--ink); padding: 8rem 5rem; color: var(--ivory); }
+    .galleries-section .section-title { color: var(--ivory); }
+    .galleries-section .features-desc { color: rgba(247,244,239,0.5); }
+
+    .galleries-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1.5rem;
+      margin-top: 4rem;
+    }
+
+    .gallery-card { position: relative; overflow: hidden; cursor: pointer; aspect-ratio: 3/4; }
+
+    .gallery-card img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: top center;
+      display: block;
+      transition: transform 0.7s cubic-bezier(0.2,0.8,0.2,1);
+      filter: brightness(0.82);
+    }
+
+    .gallery-card:hover img { transform: scale(1.05); filter: brightness(0.65); }
+
+    .gallery-card-info {
+      position: absolute;
+      inset: 0;
+      padding: 2rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      background: linear-gradient(to top, rgba(0,0,0,0.78) 0%, transparent 55%);
+    }
+
+    .gallery-card-type { font-size: 0.65rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--gold); margin-bottom: 0.5rem; }
+    .gallery-card-title { font-family: 'Cormorant Garamond', serif; font-size: 1.6rem; font-weight: 300; color: white; line-height: 1.1; margin-bottom: 0.5rem; }
+    .gallery-card-sub { font-size: 0.75rem; color: rgba(255,255,255,0.5); letter-spacing: 0.04em; }
+
+    .gallery-badge {
+      position: absolute;
+      top: 1.2rem; right: 1.2rem;
+      background: rgba(201,169,110,0.12);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(201,169,110,0.3);
+      color: var(--gold-light);
+      font-size: 0.62rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      padding: 0.3rem 0.8rem;
+    }
+
+    .gallery-card-wide { grid-column: span 2; aspect-ratio: 16/9; }
+
+    /* ── SHOWCASE ── */
+    .showcase-section { padding: 8rem 5rem; background: var(--card-bg); }
+
+    .showcase-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6rem; align-items: center; }
+
+    .showcase-screens { position: relative; height: 600px; }
+
+    .showcase-screens::before {
+      content: '';
+      position: absolute;
+      top: -20px; left: -20px; right: 20px; bottom: -20px;
+      border: 1px solid var(--border);
+      z-index: 0;
+    }
+
+    .screen-main {
+      position: absolute; left: 0; top: 0; width: 70%;
+      box-shadow: 0 40px 80px rgba(0,0,0,0.15);
+      overflow: hidden; z-index: 2;
+    }
+
+    .screen-main img { width: 100%; height: 380px; object-fit: cover; object-position: top; display: block; }
+
+    .screen-secondary {
+      position: absolute; right: 0; bottom: 0; width: 62%;
+      box-shadow: 0 30px 60px rgba(0,0,0,0.12);
+      overflow: hidden; z-index: 3;
+      border: 4px solid var(--ivory);
+    }
+
+    .screen-secondary img { width: 100%; height: 320px; object-fit: cover; object-position: top; display: block; }
+
+    .screen-accent {
+      position: absolute; left: -20px; bottom: 80px; width: 38%;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+      overflow: hidden; z-index: 1;
+    }
+
+    .screen-accent img { width: 100%; height: 200px; object-fit: cover; object-position: top; display: block; }
+
+    .showcase-content p { color: var(--muted); line-height: 1.8; font-size: 0.95rem; font-weight: 300; margin-bottom: 1.2rem; }
+
+    .feature-list { list-style: none; margin: 2rem 0 2.5rem; }
+
+    .feature-list li {
+      padding: 0.8rem 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.9rem;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      gap: 0.8rem;
+      font-weight: 300;
+    }
+
+    .feature-list li::before { content: ''; width: 20px; height: 1px; background: var(--gold); flex-shrink: 0; }
+
+    /* ── QR SECTION ── */
+    .qr-section {
+      background: var(--ink);
+      padding: 8rem 5rem;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6rem;
+      align-items: center;
+    }
+
+    .qr-section .section-title { color: var(--ivory); }
+    .qr-section p { color: rgba(247,244,239,0.5); line-height: 1.8; font-weight: 300; margin-bottom: 1.2rem; }
+
+    .qr-visual { position: relative; }
+
+    .qr-screen { overflow: hidden; box-shadow: 0 30px 60px rgba(0,0,0,0.4); }
+    .qr-screen img { width: 100%; height: 420px; object-fit: cover; object-position: top; display: block; }
+
+    .qr-float-badge {
+      position: absolute; top: -1rem; right: -1rem;
+      background: var(--gold); color: var(--ink);
+      padding: 1.2rem 1.5rem;
+      font-size: 0.7rem; letter-spacing: 0.12em; text-transform: uppercase;
+      font-weight: 500; line-height: 1.6;
+    }
+
+    .qr-steps { margin: 2rem 0 2.5rem; display: flex; flex-direction: column; gap: 1.2rem; }
+
+    .qr-step { display: flex; align-items: flex-start; gap: 1.2rem; }
+
+    .qr-step-num {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 2rem; color: var(--gold);
+      line-height: 1; min-width: 2rem; opacity: 0.5;
+    }
+
+    .qr-step-text strong { display: block; color: var(--ivory); font-size: 0.85rem; letter-spacing: 0.05em; margin-bottom: 0.2rem; font-weight: 400; }
+    .qr-step-text span { font-size: 0.8rem; color: rgba(247,244,239,0.38); }
+
+    /* ── CTA ── */
+    .cta-section {
+      padding: 10rem 5rem;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .cta-section::before {
+      content: '';
+      position: absolute; inset: 0;
+      background: radial-gradient(ellipse 60% 50% at 50% 50%, rgba(201,169,110,0.08) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .cta-section .section-title { font-size: clamp(3rem, 5vw, 6rem); max-width: 800px; margin: 0 auto 1.5rem; }
+    .cta-section p { color: var(--muted); font-size: 1rem; max-width: 500px; margin: 0 auto 3rem; line-height: 1.7; font-weight: 300; }
+    .cta-actions { display: flex; gap: 1.2rem; justify-content: center; flex-wrap: wrap; }
+
+    /* ── FOOTER ── */
+    .footer { background: var(--ink); padding: 4rem 5rem 2.5rem; }
+
+    .footer-top {
+      display: flex; justify-content: space-between; align-items: flex-start;
+      padding-bottom: 3rem; border-bottom: 1px solid rgba(255,255,255,0.07); margin-bottom: 2rem;
+    }
+
+    .footer-logo { font-family: 'Cormorant Garamond', serif; font-size: 1.8rem; color: var(--ivory); letter-spacing: 0.08em; }
+    .footer-tagline { font-size: 0.8rem; color: rgba(247,244,239,0.3); margin-top: 0.5rem; letter-spacing: 0.05em; }
+
+    .footer-links { display: flex; gap: 4rem; }
+
+    .footer-col h4 {
+      font-size: 0.65rem; letter-spacing: 0.2em; text-transform: uppercase;
+      color: var(--gold); margin-bottom: 1.2rem; font-weight: 400; font-family: 'DM Sans', sans-serif;
+    }
+
+    .footer-col a { display: block; text-decoration: none; color: rgba(247,244,239,0.4); font-size: 0.85rem; margin-bottom: 0.6rem; transition: color 0.3s; font-weight: 300; }
+    .footer-col a:hover { color: var(--ivory); }
+
+    .footer-bottom { display: flex; justify-content: space-between; align-items: center; font-size: 0.75rem; color: rgba(247,244,239,0.22); }
+
+    .footer-social { display: flex; gap: 1rem; }
+    .footer-social a { color: rgba(247,244,239,0.28); font-size: 0.9rem; transition: color 0.3s; text-decoration: none; }
+    .footer-social a:hover { color: var(--gold); }
+
+    /* ── REVEAL ── */
+    .reveal {
+      opacity: 0;
+      transform: translateY(30px);
+      transition: opacity 0.8s cubic-bezier(0.2,0.8,0.2,1), transform 0.8s cubic-bezier(0.2,0.8,0.2,1);
+    }
+
+    .reveal.visible { opacity: 1; transform: translateY(0); }
+    .reveal-delay-1 { transition-delay: 0.1s; }
+    .reveal-delay-2 { transition-delay: 0.22s; }
+    .reveal-delay-3 { transition-delay: 0.38s; }
+    .reveal-delay-4 { transition-delay: 0.52s; }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 1100px) {
+      .bento-1 { grid-column: 1 / 7; }
+      .bento-2 { grid-column: 7 / 10; }
+      .bento-3 { grid-column: 10 / 13; }
+      .bento-4 { grid-column: 1 / 5; }
+      .bento-5 { grid-column: 5 / 13; }
+    }
+
+    @media (max-width: 1024px) {
+      .hero { grid-template-columns: 1fr; }
+      .hero-right { height: 55vh; }
+      .hero-left { padding: 8rem 2.5rem 4rem; }
+      .hero-img-overlay { background: linear-gradient(to top, var(--ivory) 0%, transparent 35%); }
+      .bento-grid { grid-template-columns: 1fr 1fr; }
+      .bento-1, .bento-2, .bento-3, .bento-4 { grid-column: span 1; }
+      .bento-5 { grid-column: span 2; grid-template-columns: 1fr; }
+      .galleries-grid { grid-template-columns: 1fr 1fr; }
+      .gallery-card-wide { grid-column: span 2; aspect-ratio: 16/9; }
+      .showcase-grid, .qr-section { grid-template-columns: 1fr; gap: 3rem; }
+      .features-header { grid-template-columns: 1fr; gap: 1.5rem; }
+      .features-section, .galleries-section, .showcase-section, .cta-section { padding: 5rem 2.5rem; }
+      .qr-section { padding: 5rem 2.5rem; }
+      .showcase-screens { height: 420px; }
+      .header, .header.scrolled { padding: 1.2rem 2rem; }
+    }
+
+    @media (max-width: 640px) {
+      .nav-links { display: none; }
+      .hero-title { font-size: 2.8rem; }
+      .galleries-grid { grid-template-columns: 1fr; }
+      .gallery-card-wide { grid-column: span 1; aspect-ratio: 3/4; }
+      .footer-top { flex-direction: column; gap: 2rem; }
+      .footer-links { flex-direction: column; gap: 2rem; }
+      .footer-bottom { flex-direction: column; gap: 1rem; text-align: center; }
+      .bento-grid { grid-template-columns: 1fr; }
+      .bento-1, .bento-2, .bento-3, .bento-4, .bento-5 { grid-column: span 1; }
+      .bento-5 { grid-template-columns: 1fr; }
+      .bento-5-img { height: 240px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="header" id="mainHeader">
+  <div class="logo">
+    <span class="logo-dot"></span>
+    PhotoBook
+  </div>
+  <nav>
+    <ul class="nav-links">
+      <li><a href="#features">Funcionalidades</a></li>
+      <li><a href="#galleries">Galerías</a></li>
+      <li><a href="#plataforma">Plataforma</a></li>
+      <li><a href="#" onclick="toast('🔑 Próximamente'); return false;" class="nav-cta">Comenzar</a></li>
+    </ul>
+  </nav>
+</header>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-left">
+    <div class="hero-eyebrow">Plataforma para fotógrafos profesionales</div>
+    <h1 class="hero-title">
+      Vende.<br>
+      Comparte.<br>
+      <em>Celebra.</em>
+    </h1>
+    <p class="hero-subtitle">
+      Galerías inteligentes, búsqueda facial con IA y un portafolio que convierte visitantes en clientes. Todo en un solo lugar.
+    </p>
+    <div class="hero-actions">
+      <button class="btn-gold" onclick="toast('✨ Beta abierta próximamente.')">Comenzar gratis</button>
+      <button class="btn-ghost" onclick="toast('📸 Demo interactiva disponible en breve.')">
+        <i class="fas fa-play" style="font-size:0.65rem;"></i> Ver demo
+      </button>
+    </div>
+  </div>
+
+  <div class="hero-right">
+    <img class="hero-img-main" src="/public/img/fotoBook/1.jpg" alt="Portfolio de fotógrafo en PhotoBook">
+    <div class="hero-img-overlay"></div>
+
+    <div class="hero-ui-card">
+      <div class="hero-ui-card-label"><i class="fas fa-lock" style="font-size:0.6rem;"></i> Galería privada</div>
+      <div class="hero-ui-card-title">La boda de Vanessa &amp; Rubén</div>
+      <div class="hero-ui-card-meta">8 fotos · Acceso con contraseña</div>
+    </div>
+
+    <div class="hero-ui-card-2">
+      <div class="hero-ui-card-2-label"><i class="fas fa-face-smile" style="font-size:0.6rem;"></i> IA Facial</div>
+      <div class="hero-ui-card-2-badge">98% precisión</div>
+      <div class="hero-ui-card-2-text">Búsqueda instantánea entre miles de fotos</div>
+    </div>
+  </div>
+</section>
+
+<!-- MARQUEE -->
+<div class="marquee-section">
+  <div class="marquee-track">
+    <div class="marquee-item">Galerías privadas <span>—</span></div>
+    <div class="marquee-item">Búsqueda facial IA <span>—</span></div>
+    <div class="marquee-item">Galería QR colaborativa <span>—</span></div>
+    <div class="marquee-item">Portafolio profesional <span>—</span></div>
+    <div class="marquee-item">Venta de fotos integrada <span>—</span></div>
+    <div class="marquee-item">Eventos en tiempo real <span>—</span></div>
+    <div class="marquee-item">Selfie check-in <span>—</span></div>
+    <div class="marquee-item">Galerías privadas <span>—</span></div>
+    <div class="marquee-item">Búsqueda facial IA <span>—</span></div>
+    <div class="marquee-item">Galería QR colaborativa <span>—</span></div>
+    <div class="marquee-item">Portafolio profesional <span>—</span></div>
+    <div class="marquee-item">Venta de fotos integrada <span>—</span></div>
+    <div class="marquee-item">Eventos en tiempo real <span>—</span></div>
+    <div class="marquee-item">Selfie check-in <span>—</span></div>
+  </div>
+</div>
+
+<!-- FEATURES BENTO -->
+<section class="features-section" id="features">
+  <div class="features-header">
+    <div>
+      <div class="section-label reveal">Herramientas</div>
+      <h2 class="section-title reveal reveal-delay-1">Todo lo que un<br><em>fotógrafo necesita</em></h2>
+    </div>
+    <p class="features-desc reveal reveal-delay-2">
+      Diseñado desde cero para fotógrafos que quieren hacer crecer su negocio. Galerías que venden, eventos que sorprenden y un portafolio que enamora.
+    </p>
+  </div>
+
+  <div class="bento-grid">
+    <div class="bento-card bento-1 reveal">
+      <div class="bento-icon"><i class="fas fa-images"></i></div>
+      <h3>Galerías + Carrito de compras</h3>
+      <p>Galerías públicas o privadas con contraseña. Tus clientes eligen sus fotos favoritas, las añaden al carrito y compran con un clic. Ingresos automáticos, sin intermediarios.</p>
+      <span class="bento-tag">Ventas automáticas</span>
+      <span class="bento-tag" style="margin-left:0.5rem;">Protección por PIN</span>
+    </div>
+
+    <div class="bento-card bento-2 reveal reveal-delay-1">
+      <div class="bento-icon"><i class="fas fa-face-smile"></i></div>
+      <h3>Búsqueda facial con IA</h3>
+      <p>Los invitados se encuentran a sí mismos entre miles de fotos en segundos. Reconocimiento facial de última generación.</p>
+      <span class="bento-tag">98% precisión</span>
+    </div>
+
+    <div class="bento-card bento-3 reveal reveal-delay-2">
+      <div class="bento-icon"><i class="fas fa-qrcode"></i></div>
+      <h3>Galería QR colaborativa</h3>
+      <p>Los invitados escanean, se registran con una selfie y suben sus fotos al instante. El álbum se construye solo durante el evento.</p>
+      <span class="bento-tag">Selfie check-in</span>
+    </div>
+
+    <div class="bento-card bento-4 reveal reveal-delay-1">
+      <div class="bento-icon"><i class="fab fa-instagram"></i></div>
+      <h3>Portafolio profesional</h3>
+      <p>Tu vitrina personal. Mostrá tu trabajo, atraé nuevos clientes y construí tu marca con un muro que impresiona.</p>
+      <span class="bento-tag">Portafolio vivo</span>
+    </div>
+
+    <div class="bento-card bento-5 reveal reveal-delay-2">
+      <div class="bento-5-content">
+        <div class="bento-icon"><i class="fas fa-envelope"></i></div>
+        <h3>Contacto integrado</h3>
+        <p>Tus clientes te escriben directamente desde tu perfil. WhatsApp, email y formulario en un solo lugar.</p>
+        <span class="bento-tag">WhatsApp · Email · Formulario</span>
+      </div>
+      <div class="bento-5-img">
+        <img src="/public/img/Contacto/1.jpg" alt="Sección de contacto PhotoBook">
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- GALLERIES DARK -->
+<section class="galleries-section" id="galleries">
+  <div class="features-header">
+    <div>
+      <div class="section-label reveal">Galerías reales</div>
+      <h2 class="section-title reveal reveal-delay-1">Cada evento,<br><em>un recuerdo único</em></h2>
+    </div>
+    <p class="features-desc reveal reveal-delay-2">
+      Galerías públicas para compartir con el mundo. Galerías privadas con contraseña para momentos íntimos. Vos decidís quién ve qué.
+    </p>
+  </div>
+
+  <div class="galleries-grid">
+    <div class="gallery-card gallery-card-wide reveal">
+      <img src="/public/img/galerias/Publicas.jpg" alt="Galería pública — La boda de Vanessa y Rubén">
+      <div class="gallery-card-info">
+        <div class="gallery-card-type"><i class="fas fa-globe-americas"></i> Galería pública</div>
+        <div class="gallery-card-title">La boda de Vanessa &amp; Rubén</div>
+        <div class="gallery-card-sub">por Juan González · Fotografía de casamientos</div>
+      </div>
+      <div class="gallery-badge">🌐 Público</div>
+    </div>
+
+    <div class="gallery-card reveal reveal-delay-1">
+      <img src="/public/img/galerias/Privadas.jpg" alt="Galería privada con contraseña">
+      <div class="gallery-card-info">
+        <div class="gallery-card-type"><i class="fas fa-lock"></i> Acceso privado</div>
+        <div class="gallery-card-title">Galería con contraseña</div>
+        <div class="gallery-card-sub">Solo quienes vos invités pueden ver las fotos</div>
+      </div>
+      <div class="gallery-badge">🔒 Privado</div>
+    </div>
+
+    <div class="gallery-card reveal reveal-delay-2">
+      <img src="/public/img/fotoBook/2.jpg" alt="Gestión de galerías">
+      <div class="gallery-card-info">
+        <div class="gallery-card-type"><i class="fas fa-layer-group"></i> Gestión de galerías</div>
+        <div class="gallery-card-title">Todas tus galerías</div>
+        <div class="gallery-card-sub">Organizá, editá y compartí desde un solo panel</div>
+      </div>
+      <div class="gallery-badge">📁 Dashboard</div>
+    </div>
+  </div>
+</section>
+
+<!-- APP SHOWCASE -->
+<section class="showcase-section" id="plataforma">
+  <div class="showcase-grid">
+    <div class="showcase-screens reveal">
+      <div class="screen-main">
+        <img src="/public/img/fotoBook/1.jpg" alt="Portfolio de fotógrafo">
+      </div>
+      <div class="screen-secondary">
+        <img src="/public/img/galerias/Publicas.jpg" alt="Galería pública">
+      </div>
+      <div class="screen-accent">
+        <img src="/public/img/fotoBook/3.jpg" alt="Perfil sobre mí">
+      </div>
+    </div>
+
+    <div class="showcase-content">
+      <div class="section-label reveal">Portafolio profesional</div>
+      <h2 class="section-title reveal reveal-delay-1">Tu marca,<br><em>tu escaparate</em></h2>
+      <p class="reveal reveal-delay-2">Creá tu perfil con fotos, especialidades, redes sociales y zona de trabajo. Un portafolio vivo que trabaja por vos las 24 horas.</p>
+      <p class="reveal reveal-delay-2">Los clientes ven tu trabajo, exploran tus galerías y te contactan directamente — todo desde tu perfil de PhotoBook.</p>
+
+      <ul class="feature-list reveal reveal-delay-3">
+        <li>Perfil personalizable con foto y especialidades</li>
+        <li>Grilla de fotos estilo Instagram</li>
+        <li>Sección "Sobre mí" con redes y sitio web</li>
+        <li>Galerías destacadas con portada y descripción</li>
+        <li>Formulario de contacto integrado con WhatsApp</li>
+      </ul>
+
+      <button class="btn-gold reveal reveal-delay-4" onclick="toast('📸 Creá tu perfil — Beta disponible pronto.')">
+        Crear mi portafolio
+      </button>
+    </div>
+  </div>
+</section>
+
+<!-- QR DARK -->
+<section class="qr-section">
+  <div>
+    <div class="section-label reveal" style="color:var(--gold);">Eventos en tiempo real</div>
+    <h2 class="section-title reveal reveal-delay-1">El álbum que<br><em>se hace solo</em></h2>
+    <p class="reveal reveal-delay-2">Generá un QR único para tu evento. Los invitados lo escanean, se registran con una selfie y empiezan a subir fotos y videos al instante.</p>
+    <p class="reveal reveal-delay-2">Ideal para casamientos, quinceañeras, cumpleaños y eventos corporativos.</p>
+
+    <div class="qr-steps reveal reveal-delay-3">
+      <div class="qr-step">
+        <div class="qr-step-num">01</div>
+        <div class="qr-step-text">
+          <strong>Generás el QR del evento</strong>
+          <span>Un código único, listo en segundos desde tu panel</span>
+        </div>
+      </div>
+      <div class="qr-step">
+        <div class="qr-step-num">02</div>
+        <div class="qr-step-text">
+          <strong>Los invitados escanean y se registran</strong>
+          <span>Selfie de check-in instantánea, sin apps ni cuentas</span>
+        </div>
+      </div>
+      <div class="qr-step">
+        <div class="qr-step-num">03</div>
+        <div class="qr-step-text">
+          <strong>El álbum se construye en vivo</strong>
+          <span>Todos suben, todos ven. El recuerdo colectivo del evento</span>
+        </div>
+      </div>
+    </div>
+
+    <button class="btn-gold reveal reveal-delay-4" onclick="toast('📱 Demo QR — Próximamente.')">
+      Ver cómo funciona
+    </button>
+  </div>
+
+  <div class="qr-visual reveal reveal-delay-1">
+    <div class="qr-screen">
+      <img src="/public/img/Contacto/2.jpg" alt="Galería colaborativa QR">
+    </div>
+    <div class="qr-float-badge">Galería<br>Colaborativa<br>QR + Selfie</div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="cta-section">
+  <div class="section-label reveal" style="justify-content:center;">Empezá hoy</div>
+  <h2 class="section-title reveal reveal-delay-1">
+    Transformá tu trabajo<br>en un <em>negocio</em>
+  </h2>
+  <p class="reveal reveal-delay-2">Unite a los fotógrafos que ya están usando PhotoBook para vender más, deleitar a sus clientes y diferenciarse de la competencia.</p>
+  <div class="cta-actions reveal reveal-delay-3">
+    <button class="btn-gold" onclick="toast('✨ Beta abierta próximamente.')">Comenzar gratis</button>
+    <button class="btn-ghost" onclick="toast('📩 contacto@photobook.com.ar')">
+      <i class="fas fa-envelope" style="font-size:0.7rem;"></i> Contactar
+    </button>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer class="footer">
+  <div class="footer-top">
+    <div>
+      <div class="footer-logo">PhotoBook</div>
+      <div class="footer-tagline">Plataforma SaaS para fotógrafos profesionales</div>
+    </div>
+    <div class="footer-links">
+      <div class="footer-col">
+        <h4>Producto</h4>
+        <a href="#features">Funcionalidades</a>
+        <a href="#galleries">Galerías</a>
+        <a href="#plataforma">Portafolio</a>
+        <a href="#">Precios</a>
+      </div>
+      <div class="footer-col">
+        <h4>Empresa</h4>
+        <a href="#">Acerca de</a>
+        <a href="#">Blog</a>
+        <a href="#">Contacto</a>
+      </div>
+      <div class="footer-col">
+        <h4>Legal</h4>
+        <a href="#">Términos</a>
+        <a href="#">Privacidad</a>
+        <a href="#">Cookies</a>
+      </div>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <span>© 2026 PhotoBook · photobook.com.ar · Todos los derechos reservados.</span>
+    <div class="footer-social">
+      <a href="#"><i class="fab fa-instagram"></i></a>
+      <a href="#"><i class="fab fa-facebook"></i></a>
+      <a href="#"><i class="fab fa-linkedin"></i></a>
+    </div>
+  </div>
+</footer>
+
+<script>
+  const header = document.getElementById('mainHeader');
+  window.addEventListener('scroll', () => {
+    header.classList.toggle('scrolled', window.scrollY > 40);
+  });
+
+  const reveals = document.querySelectorAll('.reveal');
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) { e.target.classList.add('visible'); io.unobserve(e.target); }
+    });
+  }, { threshold: 0.1, rootMargin: '0px 0px -50px 0px' });
+
+  reveals.forEach(el => io.observe(el));
+
+  window.addEventListener('load', () => {
+    reveals.forEach(el => {
+      if (el.getBoundingClientRect().top < window.innerHeight) el.classList.add('visible');
+    });
+  });
+
+  function toast(msg) {
+    const existing = document.querySelector('.pb-toast');
+    if (existing) existing.remove();
+    const t = document.createElement('div');
+    t.className = 'pb-toast';
+    t.textContent = msg;
+    Object.assign(t.style, {
+      position: 'fixed', bottom: '2rem', left: '50%',
+      transform: 'translateX(-50%) translateY(10px)',
+      background: '#0d0d0d', color: '#f7f4ef',
+      padding: '0.9rem 1.8rem', fontSize: '0.85rem',
+      letterSpacing: '0.05em', borderLeft: '3px solid #c9a96e',
+      zIndex: '10000', opacity: '0', transition: 'all 0.4s ease',
+      fontFamily: "'DM Sans', sans-serif", whiteSpace: 'nowrap',
+      boxShadow: '0 20px 40px rgba(0,0,0,0.2)'
+    });
+    document.body.appendChild(t);
+    requestAnimationFrame(() => {
+      t.style.opacity = '1';
+      t.style.transform = 'translateX(-50%) translateY(0)';
+    });
+    setTimeout(() => {
+      t.style.opacity = '0';
+      t.style.transform = 'translateX(-50%) translateY(8px)';
+      setTimeout(() => t.remove(), 400);
+    }, 3000);
+  }
+</script>
+</body>
+</html>

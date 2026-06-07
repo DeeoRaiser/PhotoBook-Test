@@ -1,0 +1,426 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Photographer {
+  id                          String                @id @default(cuid())
+  name                        String
+  email                       String                @unique
+  password                    String
+  avatar                      String?
+  emailVerified               Boolean               @default(false)
+  verificationToken           String?
+  verificationTokenExpires    DateTime?
+  resetPasswordToken          String?
+  resetPasswordTokenExpires   DateTime?
+  isBlocked                   Boolean               @default(false)
+  blockedReason               String?
+  watermarkType               String                @default("text")
+  watermarkText               String                @default("PhotoBook")
+  watermarkLogoUrl            String?
+  watermarkLogoBunnyPath      String?
+  mpAccessToken               String?
+  mpRefreshToken              String?
+  mpUserId                    String?
+  mpTokenExpiresAt            DateTime?
+  transferAlias               String?
+  transferCbu                 String?
+  portfolioEnabled            Boolean               @default(false)
+  portfolioSlug               String?               @unique
+  portfolioDisplayName        String?
+  portfolioBio                String?
+  portfolioSpecialty          String?
+  portfolioCity               String?
+  portfolioCityNormalized     String?
+  portfolioProvince           String?
+  portfolioCoverUrl           String?
+  portfolioCoverBunnyPath     String?
+  portfolioAvatarUrl          String?
+  portfolioAvatarBunnyPath    String?
+  portfolioInstagram          String?
+  portfolioFacebook           String?
+  portfolioYoutube            String?
+  portfolioLinkedin           String?
+  portfolioTiktok             String?
+  portfolioWebsite            String?
+  portfolioEmail              String?
+  portfolioWhatsapp           String?
+  portfolioTheme              String                @default("dark")
+  portfolioViews              Int                   @default(0)
+  linktreeEnabled             Boolean               @default(false)
+  linktreeSlug                String?               @unique
+  linktreeTitle               String?
+  linktreeBio                 String?
+  linktreeTheme               String                @default("dark")
+  linktreeAvatarUrl           String?
+  linktreeAvatarBunnyPath     String?
+  linktreeBackgroundUrl       String?
+  linktreeBackgroundBunnyPath String?
+  linktreeViews               Int                   @default(0)
+  publicSlug                  String?               @unique
+  storageUsedBytes            BigInt                @default(0)
+  createdAt                   DateTime              @default(now())
+  updatedAt                   DateTime              @updatedAt
+  contactMessages             ContactMessage[]
+  eventGalleryPayments        EventGalleryPayment[]
+  galleries                   Gallery[]
+  linktreeLinks               LinktreeLink[]
+  linktreeLinkClicks          LinktreeLinkClick[]
+  portfolioImages             PortfolioImage[]
+  subscription                Subscription?
+  
+  @@index([portfolioCityNormalized])
+  @@index([portfolioProvince])
+  @@index([portfolioEnabled])
+  @@index([portfolioSlug])
+  @@index([publicSlug])
+}
+
+model Gallery {
+  id             String  @id @default(cuid())
+  title          String
+  description    String?
+  slug           String  @unique
+  isPublic       Boolean @default(true)
+  password       String?
+  coverImage     String?
+  coverBunnyPath String?
+  isFeatured     Boolean @default(false)
+
+  // Theme
+  themeSlug      String @default("classic") // ← slug del theme del filesystem
+  tokenOverrides Json   @default("{}") // ← overrides de tokens del admin
+
+  // ... resto de campos existentes (no modificar)
+  photographerId       String
+  pricingMode          String    @default("per_photo")
+  printableEnabled     Boolean   @default(false)
+  downloadLinkDuration Int       @default(72)
+  expiresAt            DateTime?
+  galleryType          String    @default("standard")
+  proPhotosAreFree     Boolean   @default(false)
+  eventStartsAt        DateTime?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  photographer    Photographer     @relation(fields: [photographerId], references: [id])
+  photos          Photo[]
+  orders          Order[]
+  pricingTiers    PricingTier[]
+  printSizes      PrintSize[]
+  eventGuests     EventGuest[]
+  communityPhotos CommunityPhoto[]
+
+  @@index([photographerId])
+  @@index([slug])
+}
+
+
+model Plan {
+  id                     String         @id @default(cuid())
+  name                   String
+  price                  Decimal        @db.Decimal(10, 2)
+  maxGalleries           Int
+  maxPhotos              Int
+  durationDays           Int            @default(30)
+  allowsMercadoPago      Boolean        @default(false)
+  allowsPortfolio        Boolean        @default(false)
+  allowsEventGalleries   Boolean        @default(false)
+  freeEventGalleries     Int            @default(0)
+  extraEventGalleryPrice Decimal        @default(0) @db.Decimal(10, 2)
+  maxPortfolioPhotos     Int            @default(0)
+  allowsPrintable        Boolean        @default(false)
+  maxStorageGB           Float          @default(-1)
+  allowsLinktree         Boolean        @default(false)
+  maxLinktreeLinks       Int            @default(5)
+  isActive               Boolean        @default(true)
+  createdAt              DateTime       @default(now())
+  subscriptions          Subscription[]
+}
+
+model Subscription {
+  id             String             @id @default(cuid())
+  status         SubscriptionStatus @default(ACTIVE)
+  startDate      DateTime           @default(now())
+  expiresAt      DateTime
+  autoRenew      Boolean            @default(false)
+  notes          String?
+  amountPaid     Decimal?           @db.Decimal(10, 2)
+  paymentMethod  String?
+  paymentRef     String?
+  photographerId String             @unique
+  planId         String
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+  photographer   Photographer       @relation(fields: [photographerId], references: [id], onDelete: Cascade)
+  plan           Plan               @relation(fields: [planId], references: [id])
+}
+
+model AdminUser {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  password  String
+  createdAt DateTime @default(now())
+}
+
+model PrintSize {
+  id        String          @id @default(cuid())
+  label     String
+  sortOrder Int             @default(0)
+  galleryId String
+  gallery   Gallery         @relation(fields: [galleryId], references: [id], onDelete: Cascade)
+  tiers     PrintSizeTier[]
+
+  @@index([galleryId])
+}
+
+model PrintSizeTier {
+  id          String    @id @default(cuid())
+  minQty      Int
+  maxQty      Int?
+  price       Decimal   @db.Decimal(10, 2)
+  printSizeId String
+  printSize   PrintSize @relation(fields: [printSizeId], references: [id], onDelete: Cascade)
+
+  @@index([printSizeId])
+}
+
+model EventGuest {
+  id              String           @id @default(cuid())
+  name            String
+  selfieUrl       String?
+  selfieBunnyPath String?
+  accessToken     String           @unique
+  createdAt       DateTime         @default(now())
+  galleryId       String
+  communityPhotos CommunityPhoto[]
+  gallery         Gallery          @relation(fields: [galleryId], references: [id], onDelete: Cascade)
+
+  @@index([galleryId])
+}
+
+model CommunityPhoto {
+  id         String     @id @default(cuid())
+  bunnyUrl   String
+  bunnyPath  String
+  sizeBytes  Int        @default(0)
+  width      Int?
+  height     Int?
+  isVideo    Boolean    @default(false)
+  likesCount Int        @default(0)
+  createdAt  DateTime   @default(now())
+  galleryId  String
+  guestId    String
+  gallery    Gallery    @relation(fields: [galleryId], references: [id], onDelete: Cascade)
+  guest      EventGuest @relation(fields: [guestId], references: [id], onDelete: Cascade)
+
+  @@index([galleryId])
+  @@index([guestId])
+}
+
+model PricingTier {
+  id         String   @id @default(cuid())
+  minQty     Int
+  maxQty     Int?
+  price      Decimal  @db.Decimal(10, 2)
+  printPrice Decimal? @db.Decimal(10, 2)
+  galleryId  String
+  gallery    Gallery  @relation(fields: [galleryId], references: [id], onDelete: Cascade)
+
+  @@index([galleryId])
+}
+
+model Photo {
+  id         String      @id @default(cuid())
+  title      String?
+  bunnyUrl   String
+  bunnyPath  String
+  width      Int?
+  height     Int?
+  price      Decimal     @db.Decimal(10, 2)
+  printPrice Decimal?    @db.Decimal(10, 2)
+  createdAt  DateTime    @default(now())
+  sizeBytes  Int?
+  galleryId  String
+  orderItems OrderItem[]
+  gallery    Gallery     @relation(fields: [galleryId], references: [id], onDelete: Cascade)
+}
+
+model Order {
+  id                  String      @id @default(cuid())
+  clientEmail         String
+  clientName          String?
+  clientPhone         String?
+  total               Decimal     @db.Decimal(10, 2)
+  status              OrderStatus @default(PENDING)
+  createdAt           DateTime    @default(now())
+  downloadToken       String?     @unique
+  downloadExpiresAt   DateTime?
+  downloadCount       Int         @default(0)
+  whatsappCode        String?     @unique
+  mpPreferenceId      String?
+  receiptUrl          String?
+  clientPaymentMethod String?
+  mpPaymentId         String?     @unique
+  mpStatus            String?
+  galleryTitle        String?
+  photographerId      String?
+  galleryId           String?
+  gallery             Gallery?    @relation(fields: [galleryId], references: [id])
+  items               OrderItem[]
+}
+
+model OrderItem {
+  id              String                    @id @default(cuid())
+  price           Decimal                   @db.Decimal(10, 2)
+  itemType        String                    @default("digital")
+  photoTitle      String?
+  photoUrl        String?
+  orderId         String
+  photoId         String?
+  order           Order                     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  photo           Photo?                    @relation(fields: [photoId], references: [id])
+  printSelections OrderItemPrintSelection[]
+}
+
+model OrderItemPrintSelection {
+  id           String    @id @default(cuid())
+  label        String
+  pricePerCopy Decimal   @db.Decimal(10, 2)
+  quantity     Int
+  orderItemId  String
+  orderItem    OrderItem @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
+
+  @@index([orderItemId])
+}
+
+model PortfolioImage {
+  id             String       @id @default(cuid())
+  bunnyUrl       String
+  bunnyPath      String
+  width          Int?
+  height         Int?
+  caption        String?
+  isFeatured     Boolean      @default(false)
+  order          Int          @default(0)
+  createdAt      DateTime     @default(now())
+  photographerId String
+  photographer   Photographer @relation(fields: [photographerId], references: [id], onDelete: Cascade)
+
+  @@index([photographerId])
+}
+
+model ContactMessage {
+  id             String       @id @default(cuid())
+  senderName     String
+  senderEmail    String       @default("")
+  senderPhone    String?
+  message        String
+  isRead         Boolean      @default(false)
+  createdAt      DateTime     @default(now())
+  photographerId String
+  photographer   Photographer @relation(fields: [photographerId], references: [id], onDelete: Cascade)
+
+  @@index([photographerId])
+  @@index([isRead])
+}
+
+model EventGalleryPayment {
+  id                 String                    @id @default(cuid())
+  photographerId     String
+  mpPreferenceId     String?
+  mpPaymentId        String?                   @unique
+  amountPaid         Decimal?                  @db.Decimal(10, 2)
+  status             EventGalleryPaymentStatus @default(PENDING)
+  pendingGalleryData Json?
+  galleryId          String?                   @unique
+  createdAt          DateTime                  @default(now())
+  updatedAt          DateTime                  @updatedAt
+  photographer       Photographer              @relation(fields: [photographerId], references: [id], onDelete: Cascade)
+
+  @@index([photographerId])
+  @@index([status])
+}
+
+model DashboardTip {
+  id          String   @id @default(cuid())
+  title       String
+  description String
+  buttonLabel String?
+  buttonUrl   String?
+  isPinned    Boolean  @default(false)
+  isActive    Boolean  @default(true)
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model LinktreeLink {
+  id             String              @id @default(cuid())
+  label          String
+  url            String
+  icon           String              @default("link")
+  imageUrl       String?
+  sortOrder      Int                 @default(0)
+  isActive       Boolean             @default(true)
+  clicks         Int                 @default(0)
+  createdAt      DateTime            @default(now())
+  photographerId String
+  photographer   Photographer        @relation(fields: [photographerId], references: [id], onDelete: Cascade)
+  clickLogs      LinktreeLinkClick[]
+
+  @@index([photographerId])
+  @@index([photographerId, sortOrder])
+}
+
+model LinktreeLinkClick {
+  id             String       @id @default(cuid())
+  clickedAt      DateTime     @default(now())
+  linkId         String
+  photographerId String
+  link           LinktreeLink @relation(fields: [linkId], references: [id], onDelete: Cascade)
+  photographer   Photographer @relation(fields: [photographerId], references: [id], onDelete: Cascade)
+
+  @@index([linkId])
+  @@index([photographerId])
+  @@index([clickedAt])
+  @@index([photographerId, clickedAt])
+}
+
+model MpOAuthState {
+  id             String   @id @default(cuid())
+  state          String   @unique
+  photographerId String
+  codeVerifier   String
+  expiresAt      DateTime
+  createdAt      DateTime @default(now())
+
+  @@index([state])
+  @@index([expiresAt])
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  EXPIRED
+  SUSPENDED
+  CANCELLED
+}
+
+enum OrderStatus {
+  PENDING
+  PAID
+  DELIVERED
+  CANCELLED
+}
+
+enum EventGalleryPaymentStatus {
+  PENDING
+  APPROVED
+  FAILED
+}
