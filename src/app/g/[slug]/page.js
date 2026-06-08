@@ -27,22 +27,32 @@ export async function generateMetadata({ params }) {
 // Convierte todos los campos Decimal de un objeto a Number.
 // Next.js no puede serializar objetos Decimal al pasar props
 // de Server Components a Client Components.
+function isPrismaDecimal(val) {
+    // Detecta Decimal de Prisma sin depender del nombre del constructor
+    // (en producción el nombre queda minificado como "f").
+    // Un Decimal tiene: s (sign), e (exponent), d (digits array).
+    return (
+        val !== null &&
+        typeof val === "object" &&
+        !Array.isArray(val) &&
+        !(val instanceof Date) &&
+        typeof val.s === "number" &&
+        typeof val.e === "number" &&
+        Array.isArray(val.d) &&
+        typeof val.toNumber === "function"
+    )
+}
+
 function serializeForClient(obj) {
     if (obj === null || obj === undefined) return obj
 
-    // Decimal de Prisma → número
-    if (typeof obj === "object" && obj?.constructor?.name?.includes("Decimal")) {
-        return Number(obj)
-    }
+    // Decimal de Prisma → número (detección robusta, funciona en prod minificado)
+    if (isPrismaDecimal(obj)) return Number(obj)
 
     // Date → string ISO (Next.js no puede pasar objetos Date a Client Components)
-    if (obj instanceof Date) {
-        return obj.toISOString()
-    }
+    if (obj instanceof Date) return obj.toISOString()
 
-    if (Array.isArray(obj)) {
-        return obj.map(serializeForClient)
-    }
+    if (Array.isArray(obj)) return obj.map(serializeForClient)
 
     if (typeof obj === "object") {
         return Object.fromEntries(
