@@ -27,31 +27,34 @@ export async function generateMetadata({ params }) {
 // Convierte todos los campos Decimal de un objeto a Number.
 // Next.js no puede serializar objetos Decimal al pasar props
 // de Server Components a Client Components.
-function serializeDecimals(obj) {
+function serializeForClient(obj) {
     if (obj === null || obj === undefined) return obj
 
-    if (
-        typeof obj === "object" &&
-        obj?.constructor?.name?.includes("Decimal")
-    ) {
+    // Decimal de Prisma → número
+    if (typeof obj === "object" && obj?.constructor?.name?.includes("Decimal")) {
         return Number(obj)
     }
 
+    // Date → string ISO (Next.js no puede pasar objetos Date a Client Components)
+    if (obj instanceof Date) {
+        return obj.toISOString()
+    }
+
     if (Array.isArray(obj)) {
-        return obj.map(serializeDecimals)
+        return obj.map(serializeForClient)
     }
 
     if (typeof obj === "object") {
         return Object.fromEntries(
-            Object.entries(obj).map(([k, v]) => [
-                k,
-                serializeDecimals(v),
-            ])
+            Object.entries(obj).map(([k, v]) => [k, serializeForClient(v)])
         )
     }
 
     return obj
 }
+
+// Alias para compatibilidad con llamadas existentes
+const serializeDecimals = serializeForClient
 export default async function GalleryPage({ params, searchParams }) {
     const { slug } = await params
 
