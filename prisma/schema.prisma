@@ -144,21 +144,36 @@ model Plan {
 }
 
 model Subscription {
-  id             String             @id @default(cuid())
-  status         SubscriptionStatus @default(ACTIVE)
-  startDate      DateTime           @default(now())
-  expiresAt      DateTime
-  autoRenew      Boolean            @default(false)
-  notes          String?
-  amountPaid     Decimal?           @db.Decimal(10, 2)
-  paymentMethod  String?
-  paymentRef     String?
-  photographerId String             @unique
-  planId         String
-  createdAt      DateTime           @default(now())
-  updatedAt      DateTime           @updatedAt
-  photographer   Photographer       @relation(fields: [photographerId], references: [id], onDelete: Cascade)
-  plan           Plan               @relation(fields: [planId], references: [id])
+  id               String              @id @default(cuid())
+  status           SubscriptionStatus  @default(ACTIVE)
+  startDate        DateTime            @default(now())
+  expiresAt        DateTime
+  autoRenew        Boolean             @default(false)
+  notes            String?
+  amountPaid       Decimal?            @db.Decimal(10, 2)
+  paymentMethod    String?
+  paymentRef       String?
+  mpSubscriptionId String?
+  photographerId   String              @unique
+  planId           String
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+  photographer     Photographer        @relation(fields: [photographerId], references: [id], onDelete: Cascade)
+  plan             Plan                @relation(fields: [planId], references: [id])
+  payments         SubscriptionPayment[]
+}
+
+model SubscriptionPayment {
+  id              String       @id @default(cuid())
+  subscriptionId  String
+  mpInvoiceId     String       @unique
+  mpPreapprovalId String
+  amount          Decimal      @db.Decimal(10, 2)
+  currency        String       @default("ARS")
+  status          String
+  paidAt          DateTime
+  createdAt       DateTime     @default(now())
+  subscription    Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
 }
 
 model AdminUser {
