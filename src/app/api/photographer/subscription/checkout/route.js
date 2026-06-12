@@ -1,13 +1,51 @@
+// src/app/api/photographer/subscription/checkout/route.js
 import { NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
-import { MercadoPagoConfig, Preference } from "mercadopago"
 
-// Cliente MP del owner/plataforma
-const mpClient = new MercadoPagoConfig({
-    accessToken: process.env.MP_ACCESS_TOKEN,
-})
-const preferenceClient = new Preference(mpClient)
+const MP_API = "https://api.mercadopago.com"
+const ACCESS_TOKEN = process.env.MP_ACCESS_TOKEN
+const BASE_URL = (process.env.NEXTAUTH_URL || "http://localhost:3000").replace(/\/$/, "")
+
+/**
+ * Crea una suscripción recurrente en MercadoPago (preapproval).
+ * MP debitará automáticamente cada 30 días.
+ */
+async function createMpSubscription({ plan, photographer }) {
+    const body = {
+        reason: `Plan ${plan.name} - PhotoBook`,
+        external_reference: JSON.stringify({
+            photographerId: photographer.id,
+            planId: plan.id,
+        }),
+        payer_email: photographer.email,
+        auto_recurring: {
+            frequency: 1,
+            frequency_type: "months",
+            transaction_amount: Number(plan.price),
+            currency_id: "ARS",
+        },
+        back_url: `${BASE_URL}/dashboard/subscription?status=success`,
+        status: "pending",
+    }
+
+    const res = await fetch(`${MP_API}/preapproval`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${ACCESS_TOKEN}`,
+        },
+        body: JSON.stringify(body),
+    })
+
+    if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error(err.message || `MP Subscription error ${res.status}`)
+    }
+
+    return res.json()
+    // Respuesta incluye: id, init_point, status, auto_recurring, etc.
+}
 
 export async function POST(req) {
     try {
@@ -44,6 +82,7 @@ export async function POST(req) {
                     planId: plan.id,
                     expiresAt,
                     status: "ACTIVE",
+                    autoRenew: false,
                     amountPaid: 0,
                     paymentMethod: "free",
                     paymentRef: `free-${photographer.id}-${Date.now()}`,
@@ -53,6 +92,7 @@ export async function POST(req) {
                     planId: plan.id,
                     expiresAt,
                     status: "ACTIVE",
+                    autoRenew: false,
                     amountPaid: 0,
                     paymentMethod: "free",
                     paymentRef: `free-${photographer.id}-${Date.now()}`,
@@ -61,52 +101,70 @@ export async function POST(req) {
             })
 
             console.log(`[Checkout] ✅ Plan gratuito "${plan.name}" activado para fotógrafo ${photographer.id}`)
-
-            return NextResponse.json({
-                free: true,
-                message: `Plan ${plan.name} activado correctamente.`,
-            })
+            return NextResponse.json({ free: true, message: `Plan ${plan.name} activado correctamente.` })
         }
 
-        // ─── Plan pago: crear preferencia en MercadoPago ─────────────────────
-        const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000"
+        // ─── Si ya tiene una suscripción MP activa, cancelarla antes de crear una nueva ───
+        const existingSub = await prisma.subscription.findUnique({
+            where: { photographerId: photographer.id },
+        })
 
-        const preference = await preferenceClient.create({
-            body: {
-                items: [
-                    {
-                        id: plan.id,
-                        title: `Plan ${plan.name} - PhotoBook`,
-                        description: `${plan.durationDays} días · ${plan.maxGalleries === -1 ? "Galerías ilimitadas" : `${plan.maxGalleries} galerías`} · ${plan.maxPhotos === -1 ? "Fotos ilimitadas" : `${plan.maxPhotos} fotos por galería`}`,
-                        quantity: 1,
-                        unit_price: Number(plan.price),
-                        currency_id: "ARS",
+        if (existingSub?.mpSubscriptionId) {
+            try {
+                await fetch(`${MP_API}/preapproval/${existingSub.mpSubscriptionId}`, {
+                    method: "PUT",
+                    headers: {
+                        "Content-Type": "application/json",
+                        Authorization: `Bearer ${ACCESS_TOKEN}`,
                     },
-                ],
-                payer: {
-                    email: photographer.email,
-                    name: photographer.name,
-                },
-                back_urls: {
-                    success: `${baseUrl}/dashboard/subscription?status=success`,
-                    failure: `${baseUrl}/dashboard/subscription?status=failure`,
-                    pending: `${baseUrl}/dashboard/subscription?status=pending`,
-                },
-                external_reference: JSON.stringify({
-                    photographerId: photographer.id,
-                    planId: plan.id,
-                }),
-                notification_url: `${baseUrl}/api/webhooks/mp-subscription`,
-                statement_descriptor: "PhotoBook",
-                expires: false,
+                    body: JSON.stringify({ status: "cancelled" }),
+                })
+                console.log(`[Checkout] Suscripción MP anterior cancelada: ${existingSub.mpSubscriptionId}`)
+            } catch (err) {
+                // No bloquear si falla la cancelación del anterior
+                console.warn("[Checkout] No se pudo cancelar suscripción anterior:", err.message)
+            }
+        }
+
+        // ─── Plan pago: crear suscripción recurrente en MercadoPago ─────────────────────
+        const mpSub = await createMpSubscription({ plan, photographer })
+
+        console.log(`[Checkout] Suscripción MP creada: ${mpSub.id} para fotógrafo ${photographer.id}`)
+
+        // Guardar el ID de suscripción MP en nuestra DB (estado pending hasta que MP confirme)
+        await prisma.subscription.upsert({
+            where: { photographerId: photographer.id },
+            create: {
+                photographerId: photographer.id,
+                planId: plan.id,
+                // expiresAt temporal, se actualiza cuando el webhook confirma el pago
+                expiresAt: new Date(Date.now() + plan.durationDays * 24 * 60 * 60 * 1000),
+                status: "SUSPENDED",
+                autoRenew: true,
+                amountPaid: 0,
+                paymentMethod: "mp_subscription",
+                paymentRef: null,
+                mpSubscriptionId: mpSub.id,
+                startDate: new Date(),
+            },
+            update: {
+                planId: plan.id,
+                expiresAt: new Date(Date.now() + plan.durationDays * 24 * 60 * 60 * 1000),
+                status: "SUSPENDED",
+                autoRenew: true,
+                amountPaid: 0,
+                paymentMethod: "mp_subscription",
+                paymentRef: null,
+                mpSubscriptionId: mpSub.id,
+                startDate: new Date(),
             },
         })
 
         return NextResponse.json({
             free: false,
-            preferenceId: preference.id,
-            initPoint: preference.init_point,
-            sandboxInitPoint: preference.sandbox_init_point,
+            subscriptionId: mpSub.id,
+            initPoint: mpSub.init_point,
+            sandboxInitPoint: mpSub.sandbox_init_point || mpSub.init_point,
         })
     } catch (error) {
         console.error("Error en checkout de suscripción:", error)

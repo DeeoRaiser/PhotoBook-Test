@@ -1,5 +1,7 @@
 "use client"
 
+// src/components/planes/PlanCard.js
+
 import {
     Check,
     Zap,
@@ -17,6 +19,7 @@ import {
     Printer,
     HardDrive,
     Link2,
+    XCircle,
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -39,7 +42,7 @@ function daysLeft(expiresAt) {
 const FEATURE_ICONS = {
     "Galerías":             Images,
     "Fotos / galería":      Camera,
-    "Duración":             Clock,
+    "Facturación":          RefreshCw,
     "Mercado Pago":         CreditCard,
     "Portfolio Público":    Globe,
     "Fotos portfolio":      ImageIcon,
@@ -56,6 +59,8 @@ export default function PlanCard({ plan, subscription, onSelect, loading }) {
     const isFree     = Number(plan.price) === 0
     const remaining  = isCurrent ? daysLeft(subscription.expiresAt) : null
     const isExpiring = isCurrent && remaining !== null && remaining <= 7
+    const isCancelled = isCurrent && subscription?.status === "CANCELLED"
+    const isAutoRenew = isCurrent && subscription?.autoRenew === true
 
     const features = [
         {
@@ -67,8 +72,8 @@ export default function PlanCard({ plan, subscription, onSelect, loading }) {
             value: plan.maxPhotos === -1 ? "Ilimitadas" : plan.maxPhotos,
         },
         {
-            label: "Duración",
-            value: `${plan.durationDays} días`,
+            label: "Facturación",
+            value: isFree ? "Gratis" : "Mensual automática",
         },
         {
             label: "Mercado Pago",
@@ -122,10 +127,15 @@ export default function PlanCard({ plan, subscription, onSelect, loading }) {
         `}>
             {/* Badge */}
             {isCurrent && (
-                <div className="mb-5">
+                <div className="mb-5 flex items-center gap-2">
                     <span className="inline-flex items-center gap-1.5 rounded-full bg-neutral-900 px-3 py-1 text-[11px] font-semibold text-white">
                         <Check size={11} /> PLAN ACTUAL
                     </span>
+                    {isAutoRenew && (
+                        <span className="inline-flex items-center gap-1.5 rounded-full bg-green-100 px-3 py-1 text-[11px] font-semibold text-green-800">
+                            <RefreshCw size={10} /> AUTO-RENUEVA
+                        </span>
+                    )}
                 </div>
             )}
 
@@ -138,7 +148,7 @@ export default function PlanCard({ plan, subscription, onSelect, loading }) {
                     </span>
                 </div>
                 {!isFree && (
-                    <p className="mt-1 text-sm text-neutral-500">cada {plan.durationDays} días</p>
+                    <p className="mt-1 text-sm text-neutral-500">por mes · cobro automático</p>
                 )}
             </div>
 
@@ -179,11 +189,15 @@ export default function PlanCard({ plan, subscription, onSelect, loading }) {
                         </div>
                         <div>
                             <p className={`text-sm font-semibold ${isExpiring ? "text-amber-800" : "text-neutral-800"}`}>
-                                {isExpiring
-                                    ? `Vence en ${remaining} día${remaining !== 1 ? "s" : ""}`
-                                    : `${remaining} días restantes`}
+                                {isAutoRenew
+                                    ? `Próximo cobro en ${remaining} día${remaining !== 1 ? "s" : ""}`
+                                    : isExpiring
+                                        ? `Vence en ${remaining} día${remaining !== 1 ? "s" : ""}`
+                                        : `${remaining} días restantes`}
                             </p>
-                            <p className="text-xs text-neutral-500">Hasta {formatDate(subscription.expiresAt)}</p>
+                            <p className="text-xs text-neutral-500">
+                                {isAutoRenew ? "Se renueva el" : "Vence el"} {formatDate(subscription.expiresAt)}
+                            </p>
                         </div>
                     </div>
                 </>
@@ -192,17 +206,25 @@ export default function PlanCard({ plan, subscription, onSelect, loading }) {
             {/* Button */}
             <div className="mt-7">
                 {isCurrent ? (
-                    <Button
-                        className="h-12 w-full rounded-2xl border-neutral-300 font-semibold"
-                        variant="outline"
-                        onClick={() => onSelect(plan)}
-                        disabled={loading === plan.id}
-                    >
-                        {loading === plan.id
-                            ? <Loader2 size={17} className="mr-2 animate-spin" />
-                            : <RefreshCw size={17} className="mr-2" />}
-                        Renovar plan
-                    </Button>
+                    // Si es auto-renew, no mostramos botón de renovar (MP lo hace solo)
+                    isAutoRenew ? (
+                        <div className="h-12 w-full rounded-2xl border border-neutral-200 bg-neutral-50 flex items-center justify-center gap-2">
+                            <RefreshCw size={15} className="text-green-600" />
+                            <span className="text-sm text-neutral-600 font-medium">Cobro automático activo</span>
+                        </div>
+                    ) : (
+                        <Button
+                            className="h-12 w-full rounded-2xl border-neutral-300 font-semibold"
+                            variant="outline"
+                            onClick={() => onSelect(plan)}
+                            disabled={loading === plan.id}
+                        >
+                            {loading === plan.id
+                                ? <Loader2 size={17} className="mr-2 animate-spin" />
+                                : <RefreshCw size={17} className="mr-2" />}
+                            Reactivar suscripción
+                        </Button>
+                    )
                 ) : (
                     <Button
                         className="h-12 w-full rounded-2xl bg-neutral-900 text-white hover:bg-neutral-800 font-semibold shadow-lg shadow-neutral-200"
@@ -214,7 +236,7 @@ export default function PlanCard({ plan, subscription, onSelect, loading }) {
                             : isUpgrade
                                 ? <DollarSign size={17} className="mr-2" />
                                 : <Zap size={17} className="mr-2" />}
-                        {isUpgrade ? "Comprar" : isFree ? "Activar gratis" : "Contratar"}
+                        {isUpgrade ? "Cambiar plan" : isFree ? "Activar gratis" : "Suscribirse"}
                     </Button>
                 )}
             </div>

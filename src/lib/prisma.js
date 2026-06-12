@@ -5,7 +5,7 @@ const globalForPrisma = globalThis
 
 const adapter = new PrismaPg({
   connectionString: process.env.DATABASE_URL,
-  //ssl: { rejectUnauthorized: false },
+  ssl: { rejectUnauthorized: false },
   // Render cierra conexiones idle después de pocos segundos
   // idleTimeoutMillis: 0 le dice al pool que no expire conexiones
   max: 5,
