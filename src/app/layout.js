@@ -27,6 +27,12 @@ export default function RootLayout({ children }) {
             lang="es"
             className={`${dmSans.variable} ${dmMono.variable} h-full antialiased`}
         >
+            <head>
+                <meta
+                    name="facebook-domain-verification"
+                    content="bestt2wxmlu1b8ddgq60lhylgd7eq4"
+                />
+            </head>
             <body
                 className="min-h-full flex flex-col"
                 style={{
