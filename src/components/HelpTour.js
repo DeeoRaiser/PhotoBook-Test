@@ -528,13 +528,13 @@ export default function HelpTour() {
         transition: "transform .2s, box-shadow .2s",
         ...(isMobile
             ? { bottom: 20, right: 16 }
-            : { bottom: 24, left: 16 }),
+            : { bottom: 24, right: 24 }),
     }
 
     return (
         <>
             <button onClick={() => setShowPanel(v => !v)} title="Centro de Ayuda" style={btnStyle}>
-                {showPanel ? <X size={18} /> : <HelpCircle size={18} />}
+                {showPanel ? <X size={18} /> : <HelpCircle size={44} />}
             </button>
 
             {showPanel && !activeTour && (

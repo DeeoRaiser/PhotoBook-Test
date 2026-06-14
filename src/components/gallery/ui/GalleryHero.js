@@ -36,6 +36,7 @@ export default function GalleryHero({ gallery, layout, actions, cartItems }) {
         <div style={{ alignSelf: "flex-start" }}>
           <Author gallery={gallery} />
         </div>
+        <PricingTiers gallery={gallery} />
       </div>
     )
   }
@@ -89,6 +90,9 @@ export default function GalleryHero({ gallery, layout, actions, cartItems }) {
         <div style={{ alignSelf: "flex-start" }}>
           <Author gallery={gallery} />
         </div>
+
+        {/* Detalle de precios por paquete */}
+        <PricingTiers gallery={gallery} isDark={isDark} />
       </div>
     </section>
   )
@@ -117,6 +121,75 @@ function Title({ gallery }) {
           {gallery.description}
         </p>
       )}
+    </div>
+  )
+}
+
+/**
+ * PricingTiers — muestra los rangos de precio cuando pricingMode === "tiered".
+ * Se adapta visualmente al contexto: hero oscuro, claro o fullscreen-bg.
+ */
+function PricingTiers({ gallery, isDark }) {
+  if (gallery.pricingMode !== "tiered") return null
+  if (!gallery.pricingTiers?.length) return null
+
+  const tiers = [...gallery.pricingTiers].sort((a, b) => Number(a.minQty) - Number(b.minQty))
+
+  // Colores adaptados al fondo del hero
+  const textColor     = isDark === false ? "#0f172a" : "var(--pb-color-hero-text, #fff)"
+  const mutedColor    = isDark === false ? "#475569" : "rgba(255,255,255,0.7)"
+  const bgCard        = isDark === false ? "rgba(0,0,0,0.05)" : "rgba(255,255,255,0.10)"
+  const borderCard    = isDark === false ? "rgba(0,0,0,0.08)" : "rgba(255,255,255,0.18)"
+  const accentColor   = "#f59e0b"
+
+  return (
+    <div style={{ marginTop: 4 }}>
+      {/* Título de la sección */}
+      <p style={{
+        fontSize: 11, fontWeight: 700, letterSpacing: "0.08em",
+        textTransform: "uppercase",
+        color: accentColor,
+        margin: "0 0 8px",
+      }}>
+        💰 Precios por paquete
+      </p>
+
+      {/* Lista de tiers */}
+      <div style={{
+        display: "flex",
+        flexWrap: "wrap",
+        gap: 8,
+      }}>
+        {tiers.map((tier, i) => {
+          const rangeLabel = tier.maxQty
+            ? `${tier.minQty}–${tier.maxQty} fotos`
+            : `${tier.minQty}+ fotos`
+
+          return (
+            <div
+              key={tier.id ?? i}
+              style={{
+                background: bgCard,
+                border: `1px solid ${borderCard}`,
+                borderRadius: 10,
+                padding: "8px 14px",
+                display: "flex",
+                flexDirection: "column",
+                gap: 2,
+                minWidth: 110,
+              }}
+            >
+              <span style={{ fontSize: 11, fontWeight: 600, color: mutedColor }}>
+                {rangeLabel}
+              </span>
+              <span style={{ fontSize: 15, fontWeight: 800, color: textColor }}>
+                ${Number(tier.price).toLocaleString("es-AR")}
+                <span style={{ fontSize: 10, fontWeight: 500, color: mutedColor }}> /foto</span>
+              </span>
+            </div>
+          )
+        })}
+      </div>
     </div>
   )
 }

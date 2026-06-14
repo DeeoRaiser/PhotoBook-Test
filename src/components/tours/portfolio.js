@@ -62,6 +62,14 @@ const portfolioTour = {
             selector: "input[placeholder='Tu nombre completo']",
             tip: "El nombre de portfolio puede ser tu nombre artístico o tu marca.",
         },
+                {
+            id: "specialty",
+            title: "Tu nombre y especialidad",
+            body: "Completá tu nombre real y el nombre que aparecerá en el portfolio. También añadí tu especialidad.",
+            route: "/dashboard/portfolio",
+            selector: "#specialty input",
+            tip: "El nombre de portfolio puede ser tu nombre artístico o tu marca.",
+        },
         {
             id: "bio",
             title: "Completá tu bio",

@@ -57,6 +57,11 @@ export async function GET() {
             },
         })
 
+        if (!photographer) {
+            console.error("Fotógrafo no encontrado para ID:", session.user.id)
+            return NextResponse.json({ error: "Fotógrafo no encontrado" }, { status: 404 })
+        }
+
         // ── FIX: isFeatured reemplazado por el campo real del schema ──
         const galleries = await prisma.gallery.findMany({
             where: { photographerId: session.user.id, isPublic: true },
@@ -74,7 +79,7 @@ export async function GET() {
         return NextResponse.json({
             ...photographer,
             // portfolioSlug is an alias for publicSlug — prefer publicSlug when set
-            portfolioSlug: photographer.publicSlug || photographer.portfolioSlug,
+            portfolioSlug: (photographer?.publicSlug || photographer?.portfolioSlug) ?? null,
             galleries,
             planAllowsPortfolio: plan?.allowsPortfolio ?? false,
         })

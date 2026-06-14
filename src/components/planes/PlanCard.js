@@ -20,6 +20,7 @@ import {
     HardDrive,
     Link2,
     XCircle,
+    Tag,
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -36,6 +37,28 @@ function formatDate(dateStr) {
 function daysLeft(expiresAt) {
     const diff = new Date(expiresAt) - new Date()
     return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)))
+}
+
+/**
+ * Calcula el crédito por días no usados del plan actual para mostrarlo en la card.
+ * Misma lógica que en el backend (checkout/route.js).
+ */
+function calcUpgradeCredit(subscription) {
+    if (!subscription || subscription.status !== "ACTIVE" || !subscription.plan || !subscription.expiresAt) {
+        return { creditAmount: 0, daysRemaining: 0 }
+    }
+    const now = new Date()
+    const expiresAt = new Date(subscription.expiresAt)
+    const msRemaining = expiresAt - now
+    if (msRemaining <= 0) return { creditAmount: 0, daysRemaining: 0 }
+
+    const daysRemaining = msRemaining / (1000 * 60 * 60 * 24)
+    const planPrice = Number(subscription.plan.price)
+    const planDuration = subscription.plan.durationDays || 30
+    const dailyRate = planPrice / planDuration
+    const creditAmount = Math.round(dailyRate * daysRemaining * 100) / 100
+
+    return { creditAmount, daysRemaining: Math.ceil(daysRemaining) }
 }
 
 // Feature icon map
@@ -59,8 +82,18 @@ export default function PlanCard({ plan, subscription, onSelect, loading }) {
     const isFree     = Number(plan.price) === 0
     const remaining  = isCurrent ? daysLeft(subscription.expiresAt) : null
     const isExpiring = isCurrent && remaining !== null && remaining <= 7
-    const isCancelled = isCurrent && subscription?.status === "CANCELLED"
     const isAutoRenew = isCurrent && subscription?.autoRenew === true
+
+    // Calcular descuento por cambio de plan (solo si hay plan activo distinto a este)
+    const { creditAmount, daysRemaining } = isUpgrade && !isFree
+        ? calcUpgradeCredit(subscription)
+        : { creditAmount: 0, daysRemaining: 0 }
+
+    const planPrice = Number(plan.price)
+    const hasDiscount = isUpgrade && creditAmount > 0
+    const discountedPrice = hasDiscount
+        ? Math.max(1, Math.round((planPrice - creditAmount) * 100) / 100)
+        : planPrice
 
     const features = [
         {
@@ -139,15 +172,48 @@ export default function PlanCard({ plan, subscription, onSelect, loading }) {
                 </div>
             )}
 
-            {/* Header */}
-            <div>
-                <h3 className="text-2xl font-black tracking-tight text-neutral-900">{plan.name}</h3>
-                <div className="mt-4 flex items-end gap-2">
-                    <span className="text-5xl font-black tracking-tight text-neutral-900">
-                        {isFree ? "Gratis" : `$${Number(plan.price).toLocaleString("es-AR")}`}
+            {/* Badge de descuento por cambio de plan */}
+            {hasDiscount && (
+                <div className="mb-4 flex items-center gap-1.5 rounded-xl bg-green-50 border border-green-200 px-3 py-2">
+                    <Tag size={13} className="text-green-700 shrink-0" />
+                    <span className="text-xs font-semibold text-green-800">
+                        Descuento por cambio de plan — {daysRemaining} día{daysRemaining !== 1 ? "s" : ""} no usados del plan anterior
                     </span>
                 </div>
-                {!isFree && (
+            )}
+
+            {/* Header — precio */}
+            <div>
+                <h3 className="text-2xl font-black tracking-tight text-neutral-900">{plan.name}</h3>
+
+                {hasDiscount ? (
+                    // Mostrar precio original tachado + precio con descuento
+                    <div className="mt-4">
+                        <div className="flex items-end gap-3">
+                            <span className="text-5xl font-black tracking-tight text-neutral-900">
+                                ${discountedPrice.toLocaleString("es-AR")}
+                            </span>
+                            <span className="mb-1 text-xl font-semibold text-neutral-400 line-through decoration-2">
+                                ${planPrice.toLocaleString("es-AR")}
+                            </span>
+                        </div>
+                        <div className="mt-1 flex flex-col gap-0.5">
+                            <p className="text-sm text-neutral-500">primer mes · luego ${planPrice.toLocaleString("es-AR")}/mes</p>
+                            <p className="text-xs font-medium text-green-700">
+                                − ${creditAmount.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} de crédito por días no usados
+                            </p>
+                        </div>
+                    </div>
+                ) : (
+                    // Precio normal
+                    <div className="mt-4 flex items-end gap-2">
+                        <span className="text-5xl font-black tracking-tight text-neutral-900">
+                            {isFree ? "Gratis" : `$${planPrice.toLocaleString("es-AR")}`}
+                        </span>
+                    </div>
+                )}
+
+                {!isFree && !hasDiscount && (
                     <p className="mt-1 text-sm text-neutral-500">por mes · cobro automático</p>
                 )}
             </div>
@@ -179,7 +245,7 @@ export default function PlanCard({ plan, subscription, onSelect, loading }) {
                 })}
             </div>
 
-            {/* Expiration */}
+            {/* Expiration (solo plan actual) */}
             {isCurrent && (
                 <>
                     <div className="my-6 h-px bg-neutral-200" />
@@ -206,7 +272,6 @@ export default function PlanCard({ plan, subscription, onSelect, loading }) {
             {/* Button */}
             <div className="mt-7">
                 {isCurrent ? (
-                    // Si es auto-renew, no mostramos botón de renovar (MP lo hace solo)
                     isAutoRenew ? (
                         <div className="h-12 w-full rounded-2xl border border-neutral-200 bg-neutral-50 flex items-center justify-center gap-2">
                             <RefreshCw size={15} className="text-green-600" />
@@ -236,7 +301,13 @@ export default function PlanCard({ plan, subscription, onSelect, loading }) {
                             : isUpgrade
                                 ? <DollarSign size={17} className="mr-2" />
                                 : <Zap size={17} className="mr-2" />}
-                        {isUpgrade ? "Cambiar plan" : isFree ? "Activar gratis" : "Suscribirse"}
+                        {isUpgrade
+                            ? hasDiscount
+                                ? `Cambiar por $${discountedPrice.toLocaleString("es-AR")}`
+                                : "Cambiar plan"
+                            : isFree
+                                ? "Activar gratis"
+                                : "Suscribirse"}
                     </Button>
                 )}
             </div>

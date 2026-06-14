@@ -1,11 +1,12 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback } from "react"
+import { createPortal } from "react-dom"
 import {
     ShoppingBag, Loader2, Mail, Calendar, Images,
     ChevronDown, ChevronUp, Copy, Check, Link as LinkIcon,
     MessageCircle, Download, DollarSign, Clock,
-    CheckCircle2, XCircle, TrendingUp, Camera
+    CheckCircle2, XCircle, TrendingUp, Camera, X, ZoomIn
 } from "lucide-react"
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -47,7 +48,7 @@ function fallbackCopy(text) {
     ta.style.cssText = "position:fixed;top:-9999px;left:-9999px;opacity:0"
     document.body.appendChild(ta)
     ta.focus(); ta.select()
-    try { document.execCommand("copy") } catch {}
+    try { document.execCommand("copy") } catch { }
     document.body.removeChild(ta)
 }
 
@@ -88,6 +89,7 @@ function OrderCard({ order: initialOrder, onStatusChange }) {
     const [order, setOrder] = useState(initialOrder)
     const [expanded, setExpanded] = useState(false)
     const [updating, setUpdating] = useState(false)
+    const [lightboxSrc, setLightboxSrc] = useState(null)
 
     useEffect(() => { setOrder(initialOrder) }, [initialOrder])
 
@@ -157,241 +159,332 @@ function OrderCard({ order: initialOrder, onStatusChange }) {
                 </div>
             </div>
 
-                {/* ── Expanded detail ── */}
-                {expanded && (
-                    <div style={F.expandedArea}>
+            {/* ── Expanded detail ── */}
+            {expanded && (
+                <div style={F.expandedArea}>
 
-                        {/* Payment method badge */}
-                        {order.clientPaymentMethod && (
-                            <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 12 }}>
-                                <span style={{ fontSize: 10, fontWeight: 700, color: "#64748b", letterSpacing: "0.05em" }}>MÉTODO DE PAGO:</span>
+                    {/* Payment method badge */}
+                    {order.clientPaymentMethod && (
+                        <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 12 }}>
+                            <span style={{ fontSize: 10, fontWeight: 700, color: "#64748b", letterSpacing: "0.05em" }}>MÉTODO DE PAGO:</span>
+                            <span style={{
+                                display: "inline-flex", alignItems: "center", gap: 4,
+                                fontSize: 10, fontWeight: 700, padding: "2px 9px", borderRadius: 20,
+                                ...(order.clientPaymentMethod === "mercadopago"
+                                    ? { color: "#004f72", background: "#e8f5fe", border: "1px solid #b3d9f7" }
+                                    : order.clientPaymentMethod === "transferencia"
+                                        ? { color: "#065f46", background: "#ecfdf5", border: "1px solid #a7f3d0" }
+                                        : { color: "#5b21b6", background: "#f5f3ff", border: "1px solid #ddd6fe" })
+                            }}>
+                                {order.clientPaymentMethod === "mercadopago" ? "Mercado Pago"
+                                    : order.clientPaymentMethod === "transferencia" ? "Transferencia"
+                                        : "Acordar con fotógrafo"}
+                            </span>
+                        </div>
+                    )}
+
+                    {/* Photo thumbnails */}
+                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 }}>
+                        {order.items.map((item) => (
+                            <div key={item.id} style={{ position: "relative" }}>
+                                <div style={{ width: 60, height: 60, borderRadius: 10, overflow: "hidden", background: "#e2e8f0", flexShrink: 0 }}>
+                                    {item.photo ? (
+                                        <img src={item.photo.bunnyUrl} alt={item.photo.title || "Foto"} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                                    ) : item.photoUrl ? (
+                                        <img src={item.photoUrl} alt="Foto" style={{ width: "100%", height: "100%", objectFit: "cover", opacity: 0.35, filter: "grayscale(1)" }} />
+                                    ) : (
+                                        <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                                            <Camera size={16} color="#cbd5e1" />
+                                        </div>
+                                    )}
+                                </div>
                                 <span style={{
-                                    display: "inline-flex", alignItems: "center", gap: 4,
-                                    fontSize: 10, fontWeight: 700, padding: "2px 9px", borderRadius: 20,
-                                    ...(order.clientPaymentMethod === "mercadopago"
-                                        ? { color: "#004f72", background: "#e8f5fe", border: "1px solid #b3d9f7" }
-                                        : order.clientPaymentMethod === "transferencia"
-                                            ? { color: "#065f46", background: "#ecfdf5", border: "1px solid #a7f3d0" }
-                                            : { color: "#5b21b6", background: "#f5f3ff", border: "1px solid #ddd6fe" })
+                                    position: "absolute", bottom: -4, right: -4,
+                                    background: "white", border: "1px solid #e2e8f0",
+                                    fontSize: 9, fontWeight: 700, color: "#374151",
+                                    padding: "1px 5px", borderRadius: 6,
                                 }}>
-                                    {order.clientPaymentMethod === "mercadopago" ? "Mercado Pago"
-                                        : order.clientPaymentMethod === "transferencia" ? "Transferencia"
-                                            : "Acordar con fotógrafo"}
+                                    {fmtMoney(item.price)}
                                 </span>
                             </div>
-                        )}
+                        ))}
+                    </div>
 
-                        {/* Photo thumbnails */}
-                        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 }}>
-                            {order.items.map((item) => (
-                                <div key={item.id} style={{ position: "relative" }}>
-                                    <div style={{ width: 60, height: 60, borderRadius: 10, overflow: "hidden", background: "#e2e8f0", flexShrink: 0 }}>
-                                        {item.photo ? (
-                                            <img src={item.photo.bunnyUrl} alt={item.photo.title || "Foto"} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                                        ) : item.photoUrl ? (
-                                            <img src={item.photoUrl} alt="Foto" style={{ width: "100%", height: "100%", objectFit: "cover", opacity: 0.35, filter: "grayscale(1)" }} />
-                                        ) : (
-                                            <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                                                <Camera size={16} color="#cbd5e1" />
-                                            </div>
-                                        )}
-                                    </div>
-                                    <span style={{
-                                        position: "absolute", bottom: -4, right: -4,
-                                        background: "white", border: "1px solid #e2e8f0",
-                                        fontSize: 9, fontWeight: 700, color: "#374151",
-                                        padding: "1px 5px", borderRadius: 6,
-                                    }}>
-                                        {fmtMoney(item.price)}
-                                    </span>
+                    {/* Download link block */}
+                    {order.downloadUrl && (
+                        <div style={{
+                            background: "white", border: "1px solid #a7f3d0",
+                            borderRadius: 14, padding: "14px 16px", marginBottom: 14,
+                        }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 10 }}>
+                                <div style={{ width: 22, height: 22, borderRadius: 7, background: "#ecfdf5", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                                    <Download size={11} color="#059669" />
                                 </div>
-                            ))}
-                        </div>
+                                <span style={{ fontSize: 11, fontWeight: 700, color: "#059669", letterSpacing: "0.04em" }}>LINK DE DESCARGA ACTIVO</span>
+                            </div>
 
-                        {/* Download link block */}
-                        {order.downloadUrl && (
+                            {/* URL row */}
                             <div style={{
-                                background: "white", border: "1px solid #a7f3d0",
-                                borderRadius: 14, padding: "14px 16px", marginBottom: 14,
+                                display: "flex", alignItems: "center", gap: 8,
+                                background: "#f8fafc", border: "1px solid #e2e8f0",
+                                borderRadius: 10, padding: "7px 10px", marginBottom: 10,
                             }}>
-                                <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 10 }}>
-                                    <div style={{ width: 22, height: 22, borderRadius: 7, background: "#ecfdf5", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                                        <Download size={11} color="#059669" />
+                                <LinkIcon size={12} color="#94a3b8" style={{ flexShrink: 0 }} />
+                                <span style={{ fontSize: 11, color: "#64748b", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontFamily: "monospace" }}>
+                                    {order.downloadUrl}
+                                </span>
+                                <CopyButton text={order.downloadUrl} label="Copiar link" />
+                            </div>
+
+                            {/* Action buttons */}
+                            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                                <a
+                                    href={`https://wa.me/?text=${encodeURIComponent(whatsappText)}`}
+                                    target="_blank" rel="noopener noreferrer"
+                                    onClick={e => e.stopPropagation()}
+                                    style={{
+                                        display: "inline-flex", alignItems: "center", gap: 6,
+                                        fontSize: 11, fontWeight: 700, color: "white",
+                                        background: "#25d366", borderRadius: 9,
+                                        padding: "6px 12px", textDecoration: "none",
+                                    }}
+                                >
+                                    <MessageCircle size={12} /> Enviar por WhatsApp
+                                </a>
+                                <CopyButton text={whatsappText} label="Copiar mensaje" />
+                                <a
+                                    href={order.downloadUrl} target="_blank" rel="noopener noreferrer"
+                                    onClick={e => e.stopPropagation()}
+                                    style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 11, color: "#64748b", textDecoration: "none", fontWeight: 600 }}
+                                >
+                                    <Download size={11} /> Ver página
+                                </a>
+                            </div>
+
+                            {/* Expiry */}
+                            {order.downloadExpiresAt && (
+                                <p style={{ fontSize: 10, color: "#94a3b8", marginTop: 10, margin: "10px 0 0" }}>
+                                    Expira: {new Date(order.downloadExpiresAt).toLocaleDateString("es-AR", { day: "2-digit", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+                                    {order.downloadCount > 0 && (
+                                        <span style={{ marginLeft: 8, color: "#cbd5e1" }}>
+                                            · Descargado {order.downloadCount} {order.downloadCount === 1 ? "vez" : "veces"}
+                                        </span>
+                                    )}
+                                </p>
+                            )}
+                        </div>
+                    )}
+
+                    {/* Receipt / Comprobante */}
+                    {order.receiptUrl && (
+                        <div style={{
+                            background: "white", border: "1px solid #a7f3d0",
+                            borderRadius: 13, padding: "12px 15px", marginBottom: 13,
+                        }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 9 }}>
+                                <div style={{ width: 22, height: 22, borderRadius: 7, background: "#ecfdf5", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#059669" strokeWidth="2.2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" /></svg>
+                                </div>
+                                <span style={{ fontSize: 11, fontWeight: 700, color: "#059669", letterSpacing: "0.04em" }}>COMPROBANTE ADJUNTO</span>
+                            </div>
+                            {order.receiptUrl.startsWith("data:image") ? (
+                                <div
+                                    onClick={e => { e.stopPropagation(); setLightboxSrc(order.receiptUrl) }}
+                                    style={{ position: "relative", cursor: "zoom-in", borderRadius: 9, overflow: "hidden", border: "1px solid #e2e8f0", background: "#f8fafc" }}
+                                >
+                                    <img src={order.receiptUrl} alt="Comprobante" style={{ width: "100%", maxHeight: 200, objectFit: "contain", display: "block" }} />
+                                    <div
+                                        style={{
+                                            position: "absolute", inset: 0,
+                                            background: "rgba(0,0,0,0)",
+                                            display: "flex", alignItems: "center", justifyContent: "center",
+                                            transition: "background 0.2s",
+                                        }}
+                                        onMouseEnter={e => { e.currentTarget.style.background = "rgba(0,0,0,0.4)"; e.currentTarget.querySelector("svg").style.opacity = "1" }}
+                                        onMouseLeave={e => { e.currentTarget.style.background = "rgba(0,0,0,0)"; e.currentTarget.querySelector("svg").style.opacity = "0" }}
+                                    >
+                                        <ZoomIn size={28} color="white" style={{ opacity: 0, transition: "opacity 0.2s", pointerEvents: "none" }} />
                                     </div>
-                                    <span style={{ fontSize: 11, fontWeight: 700, color: "#059669", letterSpacing: "0.04em" }}>LINK DE DESCARGA ACTIVO</span>
                                 </div>
-
-                                {/* URL row */}
-                                <div style={{
-                                    display: "flex", alignItems: "center", gap: 8,
-                                    background: "#f8fafc", border: "1px solid #e2e8f0",
-                                    borderRadius: 10, padding: "7px 10px", marginBottom: 10,
-                                }}>
-                                    <LinkIcon size={12} color="#94a3b8" style={{ flexShrink: 0 }} />
-                                    <span style={{ fontSize: 11, color: "#64748b", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontFamily: "monospace" }}>
-                                        {order.downloadUrl}
-                                    </span>
-                                    <CopyButton text={order.downloadUrl} label="Copiar link" />
+                            ) : order.receiptUrl.startsWith("data:application/pdf") ? (
+                                <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 9, padding: "8px 12px" }}>
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /></svg>
+                                    <span style={{ fontSize: 12, color: "#475569", fontWeight: 600 }}>Comprobante PDF adjunto</span>
+                                    <a href={order.receiptUrl} download="comprobante.pdf" target="_blank" rel="noopener noreferrer"
+                                        style={{ fontSize: 11, color: "#3b82f6", fontWeight: 600, marginLeft: "auto", textDecoration: "none" }}>
+                                        Descargar
+                                    </a>
                                 </div>
+                            ) : (
+                                <div style={{ fontSize: 12, color: "#64748b" }}>Comprobante disponible</div>
+                            )}
+                        </div>
+                    )}
 
-                                {/* Action buttons */}
-                                <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                                    <a
-                                        href={`https://wa.me/?text=${encodeURIComponent(whatsappText)}`}
-                                        target="_blank" rel="noopener noreferrer"
-                                        onClick={e => e.stopPropagation()}
+                    {/* Status actions */}
+                    {transitions.length > 0 && (
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                            <span style={{ fontSize: 11, color: "#94a3b8", fontWeight: 600 }}>Cambiar estado:</span>
+                            {transitions.map((s) => {
+                                const c = STATUS_CONFIG[s]
+                                const isDanger = s === "CANCELLED"
+                                return (
+                                    <button key={s}
+                                        disabled={updating}
+                                        onClick={e => { e.stopPropagation(); handleStatus(s) }}
                                         style={{
                                             display: "inline-flex", alignItems: "center", gap: 6,
-                                            fontSize: 11, fontWeight: 700, color: "white",
-                                            background: "#25d366", borderRadius: 9,
-                                            padding: "6px 12px", textDecoration: "none",
+                                            fontSize: 11, fontWeight: 700,
+                                            color: isDanger ? "#dc2626" : c.color,
+                                            background: isDanger ? "#fef2f2" : c.bg,
+                                            border: `1px solid ${isDanger ? "#fecaca" : c.border}`,
+                                            borderRadius: 9, padding: "6px 12px",
+                                            cursor: updating ? "not-allowed" : "pointer",
+                                            opacity: updating ? 0.6 : 1,
+                                            fontFamily: "inherit",
                                         }}
                                     >
-                                        <MessageCircle size={12} /> Enviar por WhatsApp
-                                    </a>
-                                    <CopyButton text={whatsappText} label="Copiar mensaje" />
-                                    <a
-                                        href={order.downloadUrl} target="_blank" rel="noopener noreferrer"
-                                        onClick={e => e.stopPropagation()}
-                                        style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 11, color: "#64748b", textDecoration: "none", fontWeight: 600 }}
-                                    >
-                                        <Download size={11} /> Ver página
-                                    </a>
-                                </div>
+                                        {updating
+                                            ? <Loader2 size={11} style={{ animation: "spin 1s linear infinite" }} />
+                                            : s === "PAID" ? <><CheckCircle2 size={11} /> Marcar como pagada</>
+                                                : s === "DELIVERED" ? <><Download size={11} /> Marcar como entregada</>
+                                                    : <><XCircle size={11} /> Cancelar orden</>
+                                        }
+                                    </button>
+                                )
+                            })}
+                        </div>
+                    )}
 
-                                {/* Expiry */}
-                                {order.downloadExpiresAt && (
-                                    <p style={{ fontSize: 10, color: "#94a3b8", marginTop: 10, margin: "10px 0 0" }}>
-                                        Expira: {new Date(order.downloadExpiresAt).toLocaleDateString("es-AR", { day: "2-digit", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" })}
-                                        {order.downloadCount > 0 && (
-                                            <span style={{ marginLeft: 8, color: "#cbd5e1" }}>
-                                                · Descargado {order.downloadCount} {order.downloadCount === 1 ? "vez" : "veces"}
-                                            </span>
-                                        )}
-                                    </p>
-                                )}
-                            </div>
-                        )}
 
-                        {/* Receipt / Comprobante */}
-                        {order.receiptUrl && (
-                            <div style={{
-                                background: "white", border: "1px solid #a7f3d0",
-                                borderRadius: 13, padding: "12px 15px", marginBottom: 13,
-                            }}>
-                                <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 9 }}>
-                                    <div style={{ width: 22, height: 22, borderRadius: 7, background: "#ecfdf5", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#059669" strokeWidth="2.2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" /></svg>
-                                    </div>
-                                    <span style={{ fontSize: 11, fontWeight: 700, color: "#059669", letterSpacing: "0.04em" }}>COMPROBANTE ADJUNTO</span>
-                                </div>
-                                {order.receiptUrl.startsWith("data:image") ? (
-                                    <img src={order.receiptUrl} alt="Comprobante" style={{ width: "100%", maxHeight: 200, objectFit: "contain", borderRadius: 9, border: "1px solid #e2e8f0", background: "#f8fafc" }} />
-                                ) : order.receiptUrl.startsWith("data:application/pdf") ? (
-                                    <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 9, padding: "8px 12px" }}>
-                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /></svg>
-                                        <span style={{ fontSize: 12, color: "#475569", fontWeight: 600 }}>Comprobante PDF adjunto</span>
-                                        <a href={order.receiptUrl} download="comprobante.pdf" target="_blank" rel="noopener noreferrer"
-                                            style={{ fontSize: 11, color: "#3b82f6", fontWeight: 600, marginLeft: "auto", textDecoration: "none" }}>
-                                            Descargar
-                                        </a>
-                                    </div>
-                                ) : (
-                                    <div style={{ fontSize: 12, color: "#64748b" }}>Comprobante disponible</div>
-                                )}
-                            </div>
-                        )}
+                    {/* Receipt lightbox */}
+                    {lightboxSrc && (
+                        <ReceiptLightbox src={lightboxSrc} onClose={() => setLightboxSrc(null)} />
+                    )}
 
-                        {/* Status actions */}
-                        {transitions.length > 0 && (
-                            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                                <span style={{ fontSize: 11, color: "#94a3b8", fontWeight: 600 }}>Cambiar estado:</span>
-                                {transitions.map((s) => {
-                                    const c = STATUS_CONFIG[s]
-                                    const isDanger = s === "CANCELLED"
-                                    return (
-                                        <button key={s}
-                                            disabled={updating}
-                                            onClick={e => { e.stopPropagation(); handleStatus(s) }}
-                                            style={{
-                                                display: "inline-flex", alignItems: "center", gap: 6,
-                                                fontSize: 11, fontWeight: 700,
-                                                color: isDanger ? "#dc2626" : c.color,
-                                                background: isDanger ? "#fef2f2" : c.bg,
-                                                border: `1px solid ${isDanger ? "#fecaca" : c.border}`,
-                                                borderRadius: 9, padding: "6px 12px",
-                                                cursor: updating ? "not-allowed" : "pointer",
-                                                opacity: updating ? 0.6 : 1,
-                                                fontFamily: "inherit",
-                                            }}
-                                        >
-                                            {updating
-                                                ? <Loader2 size={11} style={{ animation: "spin 1s linear infinite" }} />
-                                                : s === "PAID" ? <><CheckCircle2 size={11} /> Marcar como pagada</>
-                                                    : s === "DELIVERED" ? <><Download size={11} /> Marcar como entregada</>
-                                                        : <><XCircle size={11} /> Cancelar orden</>
-                                            }
-                                        </button>
-                                    )
-                                })}
-                            </div>
-                        )}
+                    {/* Pending hint */}
+                    {order.status === "PENDING" && !order.downloadToken && (
+                        <div style={{
+                            display: "flex", alignItems: "flex-start", gap: 8,
+                            background: "#fffbeb", border: "1px solid #fde68a",
+                            borderRadius: 10, padding: "10px 12px", marginTop: 12,
+                        }}>
+                            <Clock size={12} color="#d97706" style={{ flexShrink: 0, marginTop: 1 }} />
+                            <p style={{ fontSize: 11, color: "#92400e", margin: 0, lineHeight: 1.5 }}>
+                                Cuando el cliente pague, hacé click en <strong>Marcar como pagada</strong> para generar el link de descarga automáticamente.
+                            </p>
+                        </div>
+                    )}
 
-                        {/* Pending hint */}
-                        {order.status === "PENDING" && !order.downloadToken && (
-                            <div style={{
-                                display: "flex", alignItems: "flex-start", gap: 8,
-                                background: "#fffbeb", border: "1px solid #fde68a",
-                                borderRadius: 10, padding: "10px 12px", marginTop: 12,
-                            }}>
-                                <Clock size={12} color="#d97706" style={{ flexShrink: 0, marginTop: 1 }} />
-                                <p style={{ fontSize: 11, color: "#92400e", margin: 0, lineHeight: 1.5 }}>
-                                    Cuando el cliente pague, hacé click en <strong>Marcar como pagada</strong> para generar el link de descarga automáticamente.
-                                </p>
-                            </div>
-                        )}
-
-                        {transitions.length === 0 && (
-                            <p style={{ fontSize: 11, color: "#94a3b8" }}>Esta orden está en su estado final.</p>
-                        )}
-                    </div>
-                )}
+                    {transitions.length === 0 && (
+                        <p style={{ fontSize: 11, color: "#94a3b8" }}>Esta orden está en su estado final.</p>
+                    )}
+                </div>
+            )}
 
             <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
         </div>
+
     )
 
 }
 
 // ─── Main page ────────────────────────────────────────────────────────────────
 
+
+// ─── ReceiptLightbox ──────────────────────────────────────────────────────────
+
+function ReceiptLightbox({ src, onClose }) {
+    useEffect(() => {
+        const handler = (e) => { if (e.key === "Escape") onClose() }
+        document.addEventListener("keydown", handler)
+        document.body.style.overflow = "hidden"
+        return () => {
+            document.removeEventListener("keydown", handler)
+            document.body.style.overflow = ""
+        }
+    }, [onClose])
+
+    return createPortal(
+        <div
+            onClick={onClose}
+            style={{
+                position: "fixed", inset: 0, zIndex: 99999,
+                background: "rgba(0,0,0,0.88)",
+                backdropFilter: "blur(6px)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                cursor: "zoom-out",
+                padding: 24,
+            }}
+        >
+            {/* Close button */}
+            <button
+                onClick={onClose}
+                style={{
+                    position: "fixed", top: 16, right: 16,
+                    width: 40, height: 40, borderRadius: "50%",
+                    background: "rgba(255,255,255,0.12)",
+                    border: "1px solid rgba(255,255,255,0.2)",
+                    color: "white", cursor: "pointer",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    zIndex: 1,
+                }}
+            >
+                <X size={18} />
+            </button>
+
+            {/* Image */}
+            <img
+                src={src}
+                alt="Comprobante de pago"
+                onClick={e => e.stopPropagation()}
+                style={{
+                    maxWidth: "min(95vw, 960px)",
+                    maxHeight: "90vh",
+                    objectFit: "contain",
+                    borderRadius: 12,
+                    boxShadow: "0 32px 80px rgba(0,0,0,0.6)",
+                    cursor: "default",
+                }}
+            />
+        </div>,
+        document.body
+    )
+}
+
 export default function OrdersPage() {
-    const [orders, setOrders] = useState([])
+    const [allOrders, setAllOrders] = useState([])
     const [loading, setLoading] = useState(true)
     const [filter, setFilter] = useState("Todas")
 
-    const fetchOrders = async () => {
+    // Trae TODAS las órdenes sin filtro de servidor.
+    // El filtro se aplica localmente para no repetir requests
+    // ni recalcular stats cada vez que cambia el tab.
+    const fetchOrders = useCallback(async () => {
         setLoading(true)
-        const params = filter !== "Todas" ? `?status=${filter}` : ""
-        const res = await fetch(`/api/orders/photographer${params}`)
+        const res = await fetch("/api/orders/photographer")
         const data = await res.json()
         const base = window.location.origin
-        setOrders(data.map(o => ({
+        setAllOrders(data.map(o => ({
             ...o,
             downloadUrl: o.downloadToken ? `${base}/download/${o.downloadToken}` : null,
         })))
         setLoading(false)
-    }
+    }, [])
 
-    useEffect(() => { fetchOrders() }, [filter])
+    // Solo se ejecuta al montar y cuando una orden cambia de estado
+    useEffect(() => { fetchOrders() }, [fetchOrders])
 
-    const allOrders = orders
+    // Stats calculadas del set completo — no cambian al filtrar
     const revenue = allOrders.filter(o => ["PAID", "DELIVERED"].includes(o.status)).reduce((s, o) => s + Number(o.total), 0)
     const pending = allOrders.filter(o => o.status === "PENDING").length
     const delivered = allOrders.filter(o => o.status === "DELIVERED").length
 
     // Count per status for filter badges
     const countByStatus = allOrders.reduce((acc, o) => { acc[o.status] = (acc[o.status] || 0) + 1; return acc }, {})
+
+    // Filtro aplicado localmente
+    const orders = filter === "Todas" ? allOrders : allOrders.filter(o => o.status === filter)
 
     return (
         <div style={F.page}>

@@ -73,12 +73,32 @@ model Photographer {
   linktreeLinkClicks          LinktreeLinkClick[]
   portfolioImages             PortfolioImage[]
   subscription                Subscription?
-  
+  accounts                    OAuthAccount[]
+
   @@index([portfolioCityNormalized])
   @@index([portfolioProvince])
   @@index([portfolioEnabled])
   @@index([portfolioSlug])
   @@index([publicSlug])
+}
+
+// Cuentas OAuth vinculadas a un fotógrafo (Google, Facebook, etc.)
+model OAuthAccount {
+  id                String       @id @default(cuid())
+  photographerId    String
+  provider          String       // "google" | "facebook"
+  providerAccountId String
+  access_token      String?
+  refresh_token     String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  createdAt         DateTime     @default(now())
+  photographer      Photographer @relation(fields: [photographerId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([photographerId])
 }
 
 model Gallery {

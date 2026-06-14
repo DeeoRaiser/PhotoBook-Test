@@ -56,8 +56,33 @@ const S = {
     },
     subheading: {
         fontSize: 13, color: "rgba(255,255,255,0.4)",
-        margin: "0 0 24px",
+        margin: "0 0 20px",
     },
+    // ── OAuth buttons ──────────────────────────────────────────────────
+    oauthWrap: {
+        display: "flex", flexDirection: "column", gap: 10, marginBottom: 20,
+    },
+    oauthBtn: {
+        width: "100%", padding: "11px 0",
+        background: "rgba(255,255,255,0.07)",
+        border: "1px solid rgba(255,255,255,0.14)",
+        borderRadius: 12, color: "white",
+        fontSize: 14, fontWeight: 600, cursor: "pointer",
+        fontFamily: "'DM Sans', system-ui, sans-serif",
+        display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
+        transition: "background 0.15s, border-color 0.15s",
+    },
+    orRow: {
+        display: "flex", alignItems: "center", gap: 12, marginBottom: 20,
+    },
+    orLine: {
+        flex: 1, height: 1, background: "rgba(255,255,255,0.08)",
+    },
+    orText: {
+        fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.25)",
+        letterSpacing: "0.08em",
+    },
+    // ── Fields ─────────────────────────────────────────────────────────
     fieldWrap: { marginBottom: 16 },
     label: {
         display: "block", fontSize: 12, fontWeight: 700,
@@ -102,10 +127,29 @@ const S = {
     },
 }
 
+// SVG logos inline para no depender de librerías externas
+function GoogleIcon() {
+    return (
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+            <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z" fill="#4285F4"/>
+            <path d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z" fill="#34A853"/>
+            <path d="M3.964 10.707A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.707V4.961H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.039l3.007-2.332z" fill="#FBBC05"/>
+            <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.961L3.964 7.293C4.672 5.163 6.656 3.58 9 3.58z" fill="#EA4335"/>
+        </svg>
+    )
+}
+
+function FacebookIcon() {
+    return (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="#1877F2">
+            <path d="M24 12.073C24 5.405 18.627 0 12 0S0 5.405 0 12.073C0 18.1 4.388 23.094 10.125 24v-8.437H7.078v-3.49h3.047V9.41c0-3.025 1.791-4.697 4.533-4.697 1.312 0 2.686.236 2.686.236v2.97h-1.513c-1.491 0-1.956.93-1.956 1.886v2.267h3.328l-.532 3.49h-2.796V24C19.612 23.094 24 18.1 24 12.073z"/>
+        </svg>
+    )
+}
+
 function FocusInput({ id, type = "text", placeholder, registration, hasError }) {
     const [focused, setFocused] = useState(false)
     const [showPassword, setShowPassword] = useState(false)
-
     const isPassword = type === "password"
 
     return (
@@ -115,44 +159,27 @@ function FocusInput({ id, type = "text", placeholder, registration, hasError }) 
                 type={isPassword ? (showPassword ? "text" : "password") : type}
                 placeholder={placeholder}
                 {...registration}
-                onFocus={(e) => {
-                    setFocused(true)
-                    registration.onBlur && registration.onBlur(e)
-                }}
-                onBlur={(e) => {
-                    setFocused(false)
-                    registration.onBlur && registration.onBlur(e)
-                }}
+                onFocus={(e) => { setFocused(true); registration.onBlur?.(e) }}
+                onBlur={(e) => { setFocused(false); registration.onBlur?.(e) }}
                 style={{
                     ...S.input,
                     paddingRight: isPassword ? 45 : 14,
                     ...(focused ? S.inputFocus : {}),
                     borderColor: hasError
                         ? "rgba(248,113,113,0.6)"
-                        : focused
-                            ? "rgba(59,130,246,0.6)"
-                            : "rgba(255,255,255,0.12)",
+                        : focused ? "rgba(59,130,246,0.6)" : "rgba(255,255,255,0.12)",
                 }}
                 autoComplete={isPassword ? "current-password" : "email"}
             />
-
             {isPassword && (
                 <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
                     style={{
-                        position: "absolute",
-                        right: 12,
-                        top: "50%",
-                        transform: "translateY(-50%)",
-                        background: "transparent",
-                        border: "none",
-                        cursor: "pointer",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        color: "rgba(255,255,255,0.45)",
-                        padding: 0,
+                        position: "absolute", right: 12, top: "50%",
+                        transform: "translateY(-50%)", background: "transparent",
+                        border: "none", cursor: "pointer", display: "flex",
+                        alignItems: "center", color: "rgba(255,255,255,0.45)", padding: 0,
                     }}
                 >
                     {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
@@ -169,10 +196,22 @@ export default function LoginForm({ registered }) {
     const [resendEmail, setResendEmail] = useState("")
     const [resendLoading, setResendLoading] = useState(false)
     const [resendSuccess, setResendSuccess] = useState("")
+    const [oauthLoading, setOauthLoading] = useState(null) // "google" | "facebook" | null
 
     const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm({
         resolver: zodResolver(schema),
     })
+
+    const handleOAuth = async (provider) => {
+        setOauthLoading(provider)
+        setServerError("")
+        try {
+            await signIn(provider, { callbackUrl: "/dashboard" })
+        } catch {
+            setServerError("Error al conectar con " + provider + ". Intentá de nuevo.")
+            setOauthLoading(null)
+        }
+    }
 
     const onSubmit = async (data) => {
         setServerError("")
@@ -186,7 +225,6 @@ export default function LoginForm({ registered }) {
         })
 
         if (res?.error) {
-            // NextAuth v5: el código del error custom viene en res.code
             if (res.code === "EMAIL_NOT_VERIFIED" || res.error?.includes?.("EMAIL_NOT_VERIFIED")) {
                 setEmailNotVerified(true)
                 setResendEmail(data.email)
@@ -223,11 +261,7 @@ export default function LoginForm({ registered }) {
             {/* Logo */}
             <div style={S.logoWrap}>
                 <div style={S.logoIcon}>
-                    <img
-                        src="/logo.png"
-                        alt="PhotoBook"
-                        className="h-12 object-contain opacity-90"
-                    />
+                    <img src="/logo.png" alt="PhotoBook" className="h-12 object-contain opacity-90" />
                 </div>
                 <div>
                     <div style={S.logoName}>PhotoBook</div>
@@ -253,6 +287,43 @@ export default function LoginForm({ registered }) {
                 </div>
             )}
 
+            {/* ── Botones OAuth ── */}
+            <div style={S.oauthWrap}>
+                <button
+                    type="button"
+                    onClick={() => handleOAuth("google")}
+                    disabled={!!oauthLoading}
+                    style={{ ...S.oauthBtn, opacity: oauthLoading ? 0.6 : 1 }}
+                >
+                    {oauthLoading === "google"
+                        ? <Loader2 size={16} style={{ animation: "spin 1s linear infinite" }} />
+                        : <GoogleIcon />
+                    }
+                    Continuar con Google
+                </button>
+
+                <button
+                    type="button"
+                    onClick={() => handleOAuth("facebook")}
+                    disabled={!!oauthLoading}
+                    style={{ ...S.oauthBtn, opacity: oauthLoading ? 0.6 : 1 }}
+                >
+                    {oauthLoading === "facebook"
+                        ? <Loader2 size={16} style={{ animation: "spin 1s linear infinite" }} />
+                        : <FacebookIcon />
+                    }
+                    Continuar con Facebook
+                </button>
+            </div>
+
+            {/* ── Separador ── */}
+            <div style={S.orRow}>
+                <div style={S.orLine} />
+                <span style={S.orText}>O CON EMAIL</span>
+                <div style={S.orLine} />
+            </div>
+
+            {/* ── Form credentials ── */}
             <form onSubmit={handleSubmit(onSubmit)}>
                 <div style={S.fieldWrap}>
                     <label htmlFor="email" style={S.label}>EMAIL</label>
@@ -329,8 +400,8 @@ export default function LoginForm({ registered }) {
 
                 <button
                     type="submit"
-                    disabled={isSubmitting}
-                    style={{ ...S.submitBtn, opacity: isSubmitting ? 0.7 : 1 }}
+                    disabled={isSubmitting || !!oauthLoading}
+                    style={{ ...S.submitBtn, opacity: (isSubmitting || oauthLoading) ? 0.7 : 1 }}
                 >
                     {isSubmitting
                         ? <><Loader2 size={15} style={{ animation: "spin 1s linear infinite" }} /> Ingresando...</>

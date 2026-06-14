@@ -714,7 +714,7 @@ export default function PortfolioPage() {
                             <p style={S.hint}>Si lo dejás vacío se usa el nombre de tu cuenta</p>
                         </div>
                     </div>
-                    <div>
+                    <div id="specialty">
                         <label style={S.label}>ESPECIALIDAD</label>
                         <input value={specialty} onChange={e => setSpecialty(e.target.value)} placeholder="Ej: Fotografía de bodas, Retrato..." style={S.input} />
                     </div>

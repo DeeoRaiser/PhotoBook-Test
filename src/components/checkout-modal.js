@@ -110,6 +110,18 @@ export default function CheckoutModal({ galleryId, hasMpToken = false, gallery, 
     const [receiptPreview, setReceiptPreview] = useState(null)
     const receiptRef = useRef(null)
 
+    // Snapshot del carrito tomado al abrir el modal.
+    // clearCart() se llama antes de pasar a STEP.SUCCESS, por eso
+    // no podemos leer getCart() en el render del paso SUCCESS — ya estaría vacío.
+    const [cartSnapshot] = useState(() => getCart())
+    const [totalSnapshot] = useState(() => {
+        const c = getCart()
+        const ids = c.map(p => p.id)
+        return gallery
+            ? calcPrice(gallery, ids).total
+            : c.reduce((s, p) => s + Number(p.price), 0)
+    })
+
     const cart        = getCart()
     const selectedIds = cart.map(p => p.id)
     const { total, tierLabel, pricePerPhoto } = gallery
@@ -334,7 +346,7 @@ export default function CheckoutModal({ galleryId, hasMpToken = false, gallery, 
                         <div style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 12, padding: "12px 14px", marginBottom: 16, textAlign: "left" }}>
                             <p style={{ fontSize: 10, fontWeight: 700, color: "#94a3b8", letterSpacing: "0.06em", margin: "0 0 8px" }}>RESUMEN</p>
                             <div style={{ display: "flex", flexDirection: "column", gap: 4, maxHeight: 110, overflowY: "auto" }}>
-                                {cart.length > 0 ? cart.map(photo => (
+                                {cartSnapshot.length > 0 ? cartSnapshot.map(photo => (
                                     <div key={photo._key || photo.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 12, gap: 8 }}>
                                         <span style={{ color: "#64748b", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }}>{photo.title || "Foto"}</span>
                                         <div style={{ display: "flex", alignItems: "center", gap: 5, flexShrink: 0 }}>
@@ -357,7 +369,7 @@ export default function CheckoutModal({ galleryId, hasMpToken = false, gallery, 
                             </div>
                             <div style={{ borderTop: "1px solid #e2e8f0", marginTop: 8, paddingTop: 8, display: "flex", justifyContent: "space-between" }}>
                                 <span style={{ fontSize: 13, fontWeight: 700, color: "#475569" }}>Total</span>
-                                <span style={{ fontSize: 13, fontWeight: 800, color: "#0f172a" }}>${total.toFixed(2)}</span>
+                                <span style={{ fontSize: 13, fontWeight: 800, color: "#0f172a" }}>${totalSnapshot.toFixed(2)}</span>
                             </div>
                         </div>
 

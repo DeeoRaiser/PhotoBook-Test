@@ -29,14 +29,14 @@ export async function POST(req) {
         }
 
         // ── 1. Evento de suscripción (preapproval) ───────────────────────────
-        // Ocurre cuando el usuario aprueba la suscripción en el checkout de MP.
         if (type === "subscription_preapproval") {
             await handlePreapproval(resourceId)
             return NextResponse.json({ received: true })
         }
 
-        // ── 2. Evento de pago autorizado (subscription_authorized_payment) ──
-        // Ocurre cada vez que MP cobra exitosamente un período (primer pago y renovaciones).
+        // ── 2. Evento de pago autorizado (primer cobro + renovaciones) ───────
+        // FIX: este evento es el que realmente confirma que el pago fue procesado.
+        // Tanto el primer pago como las renovaciones llegan aquí.
         if (type === "subscription_authorized_payment") {
             await handleAuthorizedPayment(resourceId)
             return NextResponse.json({ received: true })
@@ -52,15 +52,15 @@ export async function POST(req) {
         return NextResponse.json({ received: true })
     } catch (error) {
         console.error("[MP Sub Webhook] Error:", error)
-        // Siempre responder 200 a MP para que no reintente indefinidamente
         return NextResponse.json({ received: true })
     }
 }
 
 /**
  * Maneja el evento subscription_preapproval.
- * Cuando el fotógrafo aprueba la suscripción en MP, este evento llega
- * con status "authorized". Activamos la suscripción en nuestra DB.
+ * Con suscripciones recurrentes de MP, este evento llega con status "pending"
+ * al crear la suscripción y puede llegar como "authorized" más tarde.
+ * El evento principal de activación es subscription_authorized_payment.
  */
 async function handlePreapproval(preapprovalId) {
     console.log(`[Preapproval] Procesando: ${preapprovalId}`)
@@ -68,84 +68,86 @@ async function handlePreapproval(preapprovalId) {
     const preapproval = await mpGet(`/preapproval/${preapprovalId}`)
     console.log(`[Preapproval] Status: ${preapproval.status}`)
 
-    // Solo procesar si está autorizado
-    if (preapproval.status !== "authorized") {
-        // Si fue cancelado/suspendido, actualizar en DB
-        if (preapproval.status === "cancelled" || preapproval.status === "paused") {
-            await prisma.subscription.updateMany({
-                where: { mpSubscriptionId: preapprovalId },
-                data: {
-                    status: preapproval.status === "cancelled" ? "CANCELLED" : "SUSPENDED",
-                    autoRenew: false,
-                },
-            })
-            console.log(`[Preapproval] Suscripción ${preapprovalId} marcada como ${preapproval.status}`)
+    // Manejar cancelaciones y pausas
+    if (preapproval.status === "cancelled" || preapproval.status === "paused") {
+        await prisma.subscription.updateMany({
+            where: { mpSubscriptionId: preapprovalId },
+            data: {
+                status: preapproval.status === "cancelled" ? "CANCELLED" : "SUSPENDED",
+                autoRenew: false,
+            },
+        })
+        console.log(`[Preapproval] Suscripción ${preapprovalId} marcada como ${preapproval.status}`)
+        return
+    }
+
+    // Si llegó como "authorized", activar directamente (igual que authorized_payment)
+    if (preapproval.status === "authorized") {
+        let ref
+        try {
+            ref = JSON.parse(preapproval.external_reference)
+        } catch {
+            console.error("[Preapproval] external_reference inválido:", preapproval.external_reference)
+            return
         }
-        return
+
+        const { photographerId, planId } = ref
+        if (!photographerId || !planId) {
+            console.error("[Preapproval] Faltan datos en external_reference")
+            return
+        }
+
+        const plan = await prisma.plan.findUnique({ where: { id: planId } })
+        if (!plan) {
+            console.error("[Preapproval] Plan no encontrado:", planId)
+            return
+        }
+
+        const expiresAt = new Date(Date.now() + plan.durationDays * 24 * 60 * 60 * 1000)
+
+        await prisma.subscription.upsert({
+            where: { photographerId },
+            create: {
+                photographerId,
+                planId,
+                expiresAt,
+                status: "ACTIVE",
+                autoRenew: true,
+                amountPaid: preapproval.auto_recurring?.transaction_amount ?? 0,
+                paymentMethod: "mp_subscription",
+                paymentRef: preapprovalId,
+                mpSubscriptionId: preapprovalId,
+                startDate: new Date(),
+            },
+            update: {
+                planId,
+                expiresAt,
+                status: "ACTIVE",
+                autoRenew: true,
+                amountPaid: preapproval.auto_recurring?.transaction_amount ?? 0,
+                paymentMethod: "mp_subscription",
+                mpSubscriptionId: preapprovalId,
+                startDate: new Date(),
+            },
+        })
+
+        console.log(`[Preapproval] ✅ Suscripción activada para fotógrafo ${photographerId}, plan ${plan.name}`)
     }
 
-    // Parsear external_reference
-    let ref
-    try {
-        ref = JSON.parse(preapproval.external_reference)
-    } catch {
-        console.error("[Preapproval] external_reference inválido:", preapproval.external_reference)
-        return
-    }
-
-    const { photographerId, planId } = ref
-    if (!photographerId || !planId) {
-        console.error("[Preapproval] Faltan datos en external_reference")
-        return
-    }
-
-    const plan = await prisma.plan.findUnique({ where: { id: planId } })
-    if (!plan) {
-        console.error("[Preapproval] Plan no encontrado:", planId)
-        return
-    }
-
-    // Calcular nueva fecha de vencimiento
-    const expiresAt = new Date(Date.now() + plan.durationDays * 24 * 60 * 60 * 1000)
-
-    await prisma.subscription.upsert({
-        where: { photographerId },
-        create: {
-            photographerId,
-            planId,
-            expiresAt,
-            status: "ACTIVE",
-            autoRenew: true,
-            amountPaid: preapproval.auto_recurring?.transaction_amount ?? 0,
-            paymentMethod: "mp_subscription",
-            paymentRef: preapprovalId,
-            mpSubscriptionId: preapprovalId,
-            startDate: new Date(),
-        },
-        update: {
-            planId,
-            expiresAt,
-            status: "ACTIVE",
-            autoRenew: true,
-            amountPaid: preapproval.auto_recurring?.transaction_amount ?? 0,
-            paymentMethod: "mp_subscription",
-            mpSubscriptionId: preapprovalId,
-            startDate: new Date(),
-        },
-    })
-
-    console.log(`[Preapproval] ✅ Suscripción activada para fotógrafo ${photographerId}, plan ${plan.name}`)
+    // status "pending": el fotógrafo acaba de aprobar, esperamos el authorized_payment
+    console.log(`[Preapproval] Status "${preapproval.status}" — esperando evento authorized_payment para activar`)
 }
 
 /**
  * Maneja el evento subscription_authorized_payment.
- * Ocurre en cada cobro periódico exitoso (primer mes + renovaciones).
- * Renueva la fecha de vencimiento en nuestra DB.
+ * 
+ * FIX PRINCIPAL: Este evento llega TANTO para el primer pago como para renovaciones.
+ * Antes solo renovaba suscripciones ya ACTIVE. Ahora también activa las SUSPENDED
+ * (que es el estado inicial mientras el usuario no completó el primer cobro).
  */
 async function handleAuthorizedPayment(invoiceId) {
     console.log(`[AuthPayment] Procesando invoice: ${invoiceId}`)
 
-    // Obtener el detalle del pago autorizado
     const invoice = await mpGet(`/authorized_payments/${invoiceId}`)
     console.log(`[AuthPayment] Status: ${invoice.status}, Preapproval: ${invoice.preapproval_id}`)
 
@@ -160,7 +162,7 @@ async function handleAuthorizedPayment(invoiceId) {
         return
     }
 
-    // Evitar duplicados: verificar si ya procesamos este invoice
+    // Evitar duplicados
     const already = await prisma.subscriptionPayment.findUnique({
         where: { mpInvoiceId: String(invoiceId) },
     })
@@ -169,24 +171,71 @@ async function handleAuthorizedPayment(invoiceId) {
         return
     }
 
-    // Buscar la suscripción por el ID de preapproval de MP
-    const sub = await prisma.subscription.findFirst({
+    // Buscar suscripción por preapproval ID (puede estar SUSPENDED o ACTIVE)
+    let sub = await prisma.subscription.findFirst({
         where: { mpSubscriptionId: preapprovalId },
         include: { plan: true },
     })
 
+    // FIX: Si no está en nuestra DB todavía (caso raro de race condition extremo),
+    // obtener los datos del preapproval y crear la suscripción
     if (!sub) {
-        console.error("[AuthPayment] Suscripción no encontrada para preapproval:", preapprovalId)
-        return
+        console.warn(`[AuthPayment] Suscripción no encontrada para preapproval ${preapprovalId}, consultando MP...`)
+        try {
+            const preapproval = await mpGet(`/preapproval/${preapprovalId}`)
+            let ref
+            try { ref = JSON.parse(preapproval.external_reference) } catch { ref = null }
+
+            if (ref?.photographerId && ref?.planId) {
+                const plan = await prisma.plan.findUnique({ where: { id: ref.planId } })
+                if (plan) {
+                    const expiresAt = new Date(Date.now() + plan.durationDays * 24 * 60 * 60 * 1000)
+                    sub = await prisma.subscription.upsert({
+                        where: { photographerId: ref.photographerId },
+                        create: {
+                            photographerId: ref.photographerId,
+                            planId: plan.id,
+                            expiresAt,
+                            status: "ACTIVE",
+                            autoRenew: true,
+                            amountPaid: invoice.transaction_amount ?? plan.price,
+                            paymentMethod: "mp_subscription",
+                            paymentRef: String(invoiceId),
+                            mpSubscriptionId: preapprovalId,
+                            startDate: new Date(),
+                        },
+                        update: {
+                            planId: plan.id,
+                            expiresAt,
+                            status: "ACTIVE",
+                            autoRenew: true,
+                            amountPaid: invoice.transaction_amount ?? plan.price,
+                            paymentMethod: "mp_subscription",
+                            mpSubscriptionId: preapprovalId,
+                            startDate: new Date(),
+                        },
+                        include: { plan: true },
+                    })
+                    console.log(`[AuthPayment] ✅ Suscripción creada y activada para fotógrafo ${ref.photographerId}`)
+                }
+            }
+        } catch (err) {
+            console.error("[AuthPayment] No se pudo recuperar el preapproval:", err.message)
+        }
+
+        if (!sub) return
     }
 
-    // Renovar: sumar 1 mes a la fecha de vencimiento actual (o desde ahora si ya expiró)
-    const baseDate = sub.expiresAt > new Date() ? sub.expiresAt : new Date()
+    // Calcular nueva fecha de vencimiento
+    // Si la suscripción está SUSPENDED (primer pago), partir desde ahora
+    // Si está ACTIVE (renovación), extender desde la fecha actual de expiración
+    const baseDate = (sub.status === "ACTIVE" && sub.expiresAt > new Date())
+        ? sub.expiresAt
+        : new Date()
     const expiresAt = new Date(baseDate.getTime() + sub.plan.durationDays * 24 * 60 * 60 * 1000)
 
-    // Registrar el pago y actualizar la suscripción en una transacción
+    // Registrar el pago y activar/renovar la suscripción en una transacción
     await prisma.$transaction([
-        // Crear registro histórico del pago
         prisma.subscriptionPayment.create({
             data: {
                 subscriptionId: sub.id,
@@ -198,11 +247,10 @@ async function handleAuthorizedPayment(invoiceId) {
                 paidAt: new Date(),
             },
         }),
-        // Renovar la suscripción
         prisma.subscription.update({
             where: { id: sub.id },
             data: {
-                status: "ACTIVE",
+                status: "ACTIVE",   // ← activa tanto el primer pago como renovaciones
                 expiresAt,
                 autoRenew: true,
                 amountPaid: invoice.transaction_amount ?? sub.plan.price,
@@ -212,12 +260,11 @@ async function handleAuthorizedPayment(invoiceId) {
         }),
     ])
 
-    console.log(`[AuthPayment] ✅ Suscripción renovada para fotógrafo ${sub.photographerId}. Nueva expiración: ${expiresAt.toISOString()}`)
+    console.log(`[AuthPayment] ✅ Suscripción ${sub.status === "ACTIVE" ? "renovada" : "activada"} para fotógrafo ${sub.photographerId}. Expiración: ${expiresAt.toISOString()}`)
 }
 
 /**
  * Compatibilidad con el webhook de pago único (modo anterior).
- * Se puede eliminar una vez que todos los fotógrafos migren a suscripciones.
  */
 async function handleLegacyPayment(paymentId) {
     const { MercadoPagoConfig, Payment } = await import("mercadopago")

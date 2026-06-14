@@ -397,6 +397,9 @@ function MinimalTopLayout({ layout, heroProps, toolbarProps, gridProps }) {
           {heroProps.gallery.photographerName && (
             <MinimalAuthor gallery={heroProps.gallery} />
           )}
+
+          {/* Detalle de precios por paquete (solo en modo tiered) */}
+          <MinimalPricingTiers gallery={heroProps.gallery} />
         </div>
 
         <PhotoGrid {...gridProps} />
@@ -407,8 +410,59 @@ function MinimalTopLayout({ layout, heroProps, toolbarProps, gridProps }) {
 
 
 /**
- * Autor para MinimalTopLayout — versión light (fondo claro)
+ * Versión light del detalle de precios por paquete para MinimalTopLayout.
+ * Se muestra debajo del autor, antes del grid de fotos.
  */
+function MinimalPricingTiers({ gallery }) {
+  if (gallery.pricingMode !== "tiered") return null
+  if (!gallery.pricingTiers?.length) return null
+
+  const tiers = [...gallery.pricingTiers].sort((a, b) => Number(a.minQty) - Number(b.minQty))
+
+  return (
+    <div style={{ marginTop: 16 }}>
+      <p style={{
+        fontSize: 11, fontWeight: 700, letterSpacing: "0.08em",
+        textTransform: "uppercase",
+        color: "#f59e0b",
+        margin: "0 0 8px",
+      }}>
+        💰 Precios por paquete
+      </p>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+        {tiers.map((tier, i) => {
+          const rangeLabel = tier.maxQty
+            ? `${tier.minQty}–${tier.maxQty} fotos`
+            : `${tier.minQty}+ fotos`
+          return (
+            <div
+              key={tier.id ?? i}
+              style={{
+                background: "var(--pb-color-surface, #f8fafc)",
+                border: "1px solid var(--pb-color-border, #e2e8f0)",
+                borderRadius: 10,
+                padding: "8px 14px",
+                display: "flex",
+                flexDirection: "column",
+                gap: 2,
+                minWidth: 110,
+              }}
+            >
+              <span style={{ fontSize: 11, fontWeight: 600, color: "var(--pb-color-text-muted, #64748b)" }}>
+                {rangeLabel}
+              </span>
+              <span style={{ fontSize: 15, fontWeight: 800, color: "var(--pb-color-text, #0f172a)" }}>
+                ${Number(tier.price).toLocaleString("es-AR")}
+                <span style={{ fontSize: 10, fontWeight: 500, color: "var(--pb-color-text-muted, #94a3b8)" }}> /foto</span>
+              </span>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 function MinimalAuthor({ gallery }) {
   const inner = (
     <div style={{ display: "flex", alignItems: "center", gap: "10px", marginTop: "14px" }}>

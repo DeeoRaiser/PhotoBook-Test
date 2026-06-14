@@ -10,7 +10,7 @@
  * - Precios tiered y per_photo
  */
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import { createPortal } from "react-dom"
 import { ShoppingCart, Star, Check, Printer, ImageIcon, X } from "lucide-react"
 import { getCart, getCartItemType } from "@/lib/cart"
@@ -321,6 +321,7 @@ export default function PhotoCard({ photo, layout, isFavorite, inCart, actions, 
     const [showModal, setShowModal] = useState(false)
     const [mounted, setMounted]     = useState(false)
     const [imgLoaded, setImgLoaded] = useState(false)
+    const imgRef = useRef(null)
 
     const aspect = ASPECT_MAP[layout?.photoAspect] ?? undefined
 
@@ -333,6 +334,11 @@ export default function PhotoCard({ photo, layout, isFavorite, inCart, actions, 
             style.id = "pb-skeleton-style"
             style.textContent = "@keyframes pb-skeleton-shimmer { from { background-position: 200% 0 } to { background-position: -200% 0 } }"
             document.head.appendChild(style)
+        }
+        // Si la imagen ya estaba en caché del browser, .complete es true
+        // pero onLoad no vuelve a dispararse — lo chequeamos manualmente.
+        if (imgRef.current?.complete) {
+            setImgLoaded(true)
         }
     }, [])
 
@@ -426,6 +432,7 @@ export default function PhotoCard({ photo, layout, isFavorite, inCart, actions, 
                 onMouseLeave={() => setHovered(false)}
             >
                 <img
+                    ref={imgRef}
                     className="pb-photo-img"
                     src={imgSrc}
                     alt={photo.title ?? ""}
