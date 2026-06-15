@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma"
 import { sendOrderConfirmationEmail } from "@/lib/mail"
+import { sendWhatsAppMessage, buildDownloadReadyMessage } from "@/lib/bot-notifier"
 import crypto from "crypto"
 
 export async function activateOrder(orderId, mpPaymentId, mpStatus) {
@@ -64,6 +65,27 @@ export async function activateOrder(orderId, mpPaymentId, mpStatus) {
         downloadUrl,
         expiresAt: downloadExpiresAt,
     }).catch((err) => console.error("[OrderHelpers] Error enviando email:", err?.message || err))
+
+    // Notificar al cliente por WhatsApp si tiene teléfono registrado
+    if (order.clientPhone) {
+        const waMessage = buildDownloadReadyMessage({
+            clientName: order.clientName,
+            galleryTitle: order.gallery.title,
+            downloadUrl,
+            expiresAt: downloadExpiresAt,
+        })
+        // waMessage es un array [texto, url] — enviamos cada uno como mensaje separado
+        const messages = Array.isArray(waMessage) ? waMessage : [waMessage]
+        ;(async () => {
+            for (const msg of messages) {
+                const { ok, error } = await sendWhatsAppMessage(order.clientPhone, msg)
+                if (!ok) { console.warn("[OrderHelpers] ⚠️ WhatsApp no enviado:", error); break }
+            }
+            console.log("[OrderHelpers] ✅ WhatsApp enviado a:", order.clientPhone)
+        })().catch((err) => console.error("[OrderHelpers] Error WhatsApp:", err?.message ?? err))
+    } else {
+        console.log("[OrderHelpers] Sin teléfono del cliente — WhatsApp omitido")
+    }
 
     return { ...updated, downloadUrl }
 }

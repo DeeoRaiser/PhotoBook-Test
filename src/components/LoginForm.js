@@ -302,7 +302,7 @@ export default function LoginForm({ registered }) {
                     Continuar con Google
                 </button>
 
-                <button
+              {/*   <button
                     type="button"
                     onClick={() => handleOAuth("facebook")}
                     disabled={!!oauthLoading}
@@ -313,8 +313,24 @@ export default function LoginForm({ registered }) {
                         : <FacebookIcon />
                     }
                     Continuar con Facebook
-                </button>
+                </button> */}
             </div>
+
+            {/* Aviso legal OAuth */}
+            <p style={{
+                fontSize: 11, color: "rgba(255,255,255,0.25)",
+                textAlign: "center", lineHeight: 1.6,
+                margin: "-8px 0 16px",
+            }}>
+                Al continuar aceptás nuestros{" "}
+                <a href="/terms" target="_blank" style={{ color: "rgba(255,255,255,0.4)", textDecoration: "underline" }}>
+                    Términos
+                </a>
+                {" "}y{" "}
+                <a href="/privacy" target="_blank" style={{ color: "rgba(255,255,255,0.4)", textDecoration: "underline" }}>
+                    Política de Privacidad
+                </a>
+            </p>
 
             {/* ── Separador ── */}
             <div style={S.orRow}>

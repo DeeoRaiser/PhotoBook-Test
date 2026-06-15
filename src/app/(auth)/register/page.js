@@ -14,6 +14,7 @@ const schema = z.object({
     name: z.string().min(2, "El nombre debe tener al menos 2 caracteres"),
     email: z.string().email("Email inválido"),
     password: z.string().min(6, "La contraseña debe tener al menos 6 caracteres"),
+    terms: z.literal(true, { errorMap: () => ({ message: "Debés aceptar los términos para continuar" }) }),
 })
 
 const S = {
@@ -102,6 +103,23 @@ const S = {
         background: "rgba(34,197,94,0.12)", border: "1px solid rgba(34,197,94,0.3)",
         borderRadius: 12, padding: "14px 16px", marginBottom: 16,
         fontSize: 13, color: "#86efac", fontWeight: 500, lineHeight: 1.5,
+    },
+    termsWrap: {
+        display: "flex", alignItems: "flex-start", gap: 10,
+        margin: "16px 0 4px",
+    },
+    termsCheck: {
+        width: 18, height: 18, borderRadius: 5, flexShrink: 0,
+        border: "1px solid rgba(255,255,255,0.2)",
+        background: "rgba(255,255,255,0.07)",
+        cursor: "pointer", marginTop: 1,
+        accentColor: "#3b82f6",
+    },
+    termsLabel: {
+        fontSize: 12, color: "rgba(255,255,255,0.5)", lineHeight: 1.6, cursor: "pointer",
+    },
+    termsLink: {
+        color: "#60a5fa", fontWeight: 600, textDecoration: "none",
     },
 }
 
@@ -458,6 +476,28 @@ export default function RegisterPage() {
                     }}>
                         <AlertCircle size={13} /> {serverError}
                     </div>
+                )}
+
+                {/* Términos y condiciones */}
+                <div style={S.termsWrap}>
+                    <input
+                        type="checkbox"
+                        id="terms"
+                        style={S.termsCheck}
+                        {...register("terms")}
+                    />
+                    <label htmlFor="terms" style={S.termsLabel}>
+                        Acepto los{" "}
+                        <a href="/terms" target="_blank" style={S.termsLink}>Términos y Condiciones</a>
+                        {" "}y la{" "}
+                        <a href="/privacy" target="_blank" style={S.termsLink}>Política de Privacidad</a>
+                        {" "}de PhotoBook
+                    </label>
+                </div>
+                {errors.terms && (
+                    <p style={{ ...S.fieldError, marginBottom: 8 }}>
+                        <AlertCircle size={11} />Debes aceptar los términos y condiciones para continuar
+                    </p>
                 )}
 
                 <button

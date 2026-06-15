@@ -9,15 +9,27 @@
 const FOOTER_LINKS = [
   {
     title: "Producto",
-    links: ["Funcionalidades", "Galerías", "Portafolio", "Precios"],
+    links: [
+      { label: "Funcionalidades", href: "/#funcionalidades" },
+      { label: "Galerías",        href: "/#galerias" },
+      { label: "Portafolio",      href: "/#plataforma" },
+      { label: "Precios",         href: "/register" },
+    ],
   },
   {
     title: "Empresa",
-    links: ["Acerca de", "Blog", "Contacto"],
+    links: [
+      { label: "Acerca de",   href: "/#plataforma" },
+      { label: "Fotógrafos",  href: "/fotografos" },
+      { label: "Contacto",    href: "mailto:soporte@photobook.com.ar" },
+    ],
   },
   {
     title: "Legal",
-    links: ["Términos", "Privacidad", "Cookies"],
+    links: [
+      { label: "Términos",   href: "/terms" },
+      { label: "Privacidad", href: "/privacy" },
+    ],
   },
 ];
 
@@ -55,13 +67,13 @@ export default function Footer() {
                   {title}
                 </h4>
                 <ul className="list-none m-0 p-0">
-                  {links.map((link) => (
-                    <li key={link}>
+                  {links.map(({ label, href }) => (
+                    <li key={label}>
                       <a
-                        href="#"
+                        href={href}
                         className="block no-underline text-[rgba(184,224,247,0.45)] text-[0.85rem] mb-2 font-light transition-colors duration-300 hover:text-white"
                       >
-                        {link}
+                        {label}
                       </a>
                     </li>
                   ))}

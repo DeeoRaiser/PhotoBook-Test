@@ -319,26 +319,76 @@ export default function CheckoutModal({ galleryId, hasMpToken = false, gallery, 
                             </>
                         )}
 
-                        {order?.whatsappCode && (
-                            <div style={{ background: "#ecfdf5", border: "1px solid #a7f3d0", borderRadius: 12, padding: "12px 14px", marginBottom: 16, textAlign: "left" }}>
-                                <div style={{ display: "flex", alignItems: "flex-start", gap: 9, marginBottom: 8 }}>
-                                    <MessageCircle size={15} color="#059669" style={{ flexShrink: 0, marginTop: 1 }} />
-                                    <div style={{ flex: 1 }}>
-                                        <p style={{ fontSize: 12, fontWeight: 800, color: "#065f46", margin: "0 0 4px" }}>Código para solicitar por WhatsApp</p>
-                                        <p style={{ fontSize: 11, color: "#047857", margin: 0, lineHeight: 1.5 }}>
-                                            Usalo cuando el pago figure aprobado. El bot validará que escribas desde este mismo número.
+                        {/* ── WhatsApp CTA — solo para transferencia y manual ── */}
+                        {(paymentMethod === "transferencia" || paymentMethod === "manual") && order?.whatsappLink && (
+                            <div style={{
+                                background: "#f0fdf4",
+                                border: "2px solid #25d366",
+                                borderRadius: 14,
+                                padding: "16px 14px",
+                                marginBottom: 16,
+                                textAlign: "left",
+                            }}>
+                                {/* Ícono + título */}
+                                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
+                                    <div style={{
+                                        width: 38, height: 38, borderRadius: 12,
+                                        background: "#25d366",
+                                        display: "flex", alignItems: "center", justifyContent: "center",
+                                        flexShrink: 0,
+                                    }}>
+                                        <MessageCircle size={18} color="white" />
+                                    </div>
+                                    <div>
+                                        <p style={{ fontSize: 13, fontWeight: 800, color: "#14532d", margin: 0 }}>
+                                            ¡Avisanos por WhatsApp!
+                                        </p>
+                                        <p style={{ fontSize: 11, color: "#16a34a", margin: 0 }}>
+                                            Para avisarte cuando tu descarga esté lista
                                         </p>
                                     </div>
                                 </div>
-                                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, background: "white", borderRadius: 9, padding: "8px 10px" }}>
-                                    <span style={{ fontSize: 13, fontWeight: 800, color: "#064e3b" }}>Pedido N° {order.whatsappCode}</span>
+
+                                {/* Explicación */}
+                                <p style={{ fontSize: 12, color: "#166534", lineHeight: 1.6, margin: "0 0 12px" }}>
+                                    Escribinos con tu <strong>número de pedido</strong> y cuando confirmemos el pago
+                                    te enviamos el link de descarga directo al chat.
+                                </p>
+
+                                {/* Código de pedido */}
+                                <div style={{
+                                    display: "flex", alignItems: "center", justifyContent: "space-between",
+                                    background: "white", border: "1px solid #bbf7d0",
+                                    borderRadius: 10, padding: "9px 12px", marginBottom: 10,
+                                }}>
+                                    <div>
+                                        <p style={{ fontSize: 10, fontWeight: 700, color: "#86efac", letterSpacing: "0.05em", margin: "0 0 2px" }}>TU NÚMERO DE PEDIDO</p>
+                                        <span style={{ fontSize: 15, fontWeight: 800, color: "#14532d", letterSpacing: "0.03em" }}>
+                                            N° {order.whatsappCode}
+                                        </span>
+                                    </div>
                                     {order?.whatsappMessage && <CopyBtn text={order.whatsappMessage} />}
                                 </div>
-                                {order?.whatsappLink && (
-                                    <a href={order.whatsappLink} target="_blank" rel="noreferrer" style={{ marginTop: 8, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, width: "100%", padding: "9px", background: "#059669", borderRadius: 10, color: "white", fontSize: 12, fontWeight: 700, textDecoration: "none" }}>
-                                        <MessageCircle size={13} /> Abrir WhatsApp
-                                    </a>
-                                )}
+
+                                {/* Botón principal */}
+                                <a
+                                    href={order.whatsappLink}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    style={{
+                                        display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                                        width: "100%", padding: "12px",
+                                        background: "#25d366",
+                                        borderRadius: 11,
+                                        color: "white", fontSize: 14, fontWeight: 800,
+                                        textDecoration: "none", boxSizing: "border-box",
+                                    }}
+                                >
+                                    <MessageCircle size={16} /> Enviar WhatsApp ahora
+                                </a>
+                                <p style={{ fontSize: 10, color: "#4ade80", margin: "8px 0 0", textAlign: "center" }}>
+                                    El mensaje ya está escrito — solo tocá Enviar
+                                </p>
                             </div>
                         )}
 
